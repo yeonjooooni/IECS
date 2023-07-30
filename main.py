@@ -51,6 +51,7 @@ def time_to_minutes(time_str):
     return hour * 60 + minute
 
 # 3일간의 하차 가능 시작과 끝 시간 리스트를 구하는 함수
+# 여기서 이미 time_window와 무관하게 3일차(4320분)에 딱 cut하도록 만들어 놓음
 def get_trip_time_lists(start_time, end_time, num_days=3):
     start_time_minutes = time_to_minutes(start_time)
     end_time_minutes = time_to_minutes(end_time)

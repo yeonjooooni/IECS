@@ -107,13 +107,22 @@ def evaluate_time(distance_matrix, parameters, depot, subroute, velocity):
             wait[i] = tw_early[subroute_j][i][0] - time[i]
             time[i] = tw_early[subroute_j][i][0]
             day_num = 0
+        elif (time[i] < tw_late[subroute_j][i][0]):
+            wait[i] = 0
+            day_num = 0          
         elif (time[i] < tw_early[subroute_j][i][1]):
             wait[i] = tw_early[subroute_j][i][1] - time[i]
             time[i] = tw_early[subroute_j][i][1]  
             day_num = 1
+        elif (time[i] < tw_late[subroute_j][i][1]):
+            wait[i] = 0
+            day_num = 1
         elif (time[i] < tw_early[subroute_j][i][2]):
             wait[i] = tw_early[subroute_j][i][2] - time[i]
             time[i] = tw_early[subroute_j][i][2]  
+            day_num = 2
+        elif (time[i] < tw_late[subroute_j][i][2]):
+            wait[i] = 0
             day_num = 2
         else:
             day_num = 2  
