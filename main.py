@@ -18,7 +18,7 @@ demand_df = pd.read_csv('./과제3 실시간 주문 대응 Routing 최적화 (or
 # for i in range(1, 6):
 #     for j in range(4):
 tmp_df = demand_df[demand_df['date']=='2023-05-02']
-tmp_df = tmp_df[tmp_df['Group'].isin([0,1])]
+tmp_df = tmp_df[tmp_df['Group'].isin([0])]
 tmp_df = tmp_df[tmp_df['터미널ID']=='O_179']
 
 id_list_only_in_tmp_df = list(set(tmp_df['터미널ID'].values.tolist() + tmp_df['착지ID'].values.tolist()))
@@ -126,6 +126,7 @@ mutation_rate   = 0.2     # GA Mutation Rate
 elite           = 1        # GA Elite Member(s) - Total Number of Best Individual(s) that (is)are Maintained 
 generations     = 100     # GA Number of Generations
 
-
+fleet_used = [0,0,0,0,0]
 # Run GA Function
-ga_report, ga_vrp = genetic_algorithm_vrp(coordinates, distance_matrix, parameters, velocity, fixed_cost, variable_cost, capacity, real_distance_matrix, population_size, vehicle_types, n_depots, route, model, time_window, fleet_size, mutation_rate, elite, generations, penalty_value, graph)
+ga_report, ga_vrp = genetic_algorithm_vrp(coordinates, distance_matrix, parameters, velocity, fixed_cost, variable_cost, capacity, real_distance_matrix, population_size, vehicle_types, n_depots, route, model, time_window, fleet_size, mutation_rate, elite, generations, penalty_value, graph, fleet_used)
+print(ga_report)
