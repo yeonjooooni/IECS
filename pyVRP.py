@@ -1,3 +1,4 @@
+# Required Libraries
 import folium
 import folium.plugins
 import pandas as pd
@@ -301,7 +302,6 @@ def target_function(population, distance_matrix, parameters, velocity, fixed_cos
     else:
         end = 1
 
-    no_fixed_cost_count = [0,0,0,0,0]
     # k individuals, individual은 각 차들의 route
     # individual[i] = [depot(출발), route(list type), vehicle]
     # 거리*비용 + penalty
@@ -311,6 +311,7 @@ def target_function(population, distance_matrix, parameters, velocity, fixed_cos
         i          = 0
         pnlt       = 0
         flt_cnt    = [0]*len(fleet_size)
+        no_fixed_cost_count = [0,0,0,0,0]
         while (size > i): # i subroutes 
             dist = evaluate_distance(real_distance_matrix, individual[0][i], individual[1][i])
             if(time_window == 'with'):
@@ -336,15 +337,14 @@ def target_function(population, distance_matrix, parameters, velocity, fixed_cos
                         pnlt = pnlt + v_sum #차량 대수 조절
 
             flag = True
+            # 특정 차 종류의 사용 댓수가 
             if fleet_used[individual[2][i][0]] > no_fixed_cost_count[individual[2][i][0]]:
                 flag = False
                 no_fixed_cost_count[individual[2][i][0]] += 1
-
             if flag:
                 cost_s = evaluate_cost(dist, wait, parameters, depot = individual[0][i], subroute = individual[1][i], fixed_cost = [fixed_cost[individual[2][i][0]]], variable_cost = [variable_cost[individual[2][i][0]]], time_window = time_window)
             else:
                 cost_s = evaluate_cost(dist, wait, parameters, depot = individual[0][i], subroute = individual[1][i], fixed_cost = [0],                                 variable_cost = [variable_cost[individual[2][i][0]]], time_window = time_window)
-
             cost[k][0] = cost[k][0] + cost_s[-end] + pnlt*penalty_value
 
             size       = len(individual[1])
@@ -607,20 +607,20 @@ def genetic_algorithm_vrp(coordinates, distance_matrix, parameters, velocity, fi
     # 기존 코드, finess_function을 통해 각 경우의 population에 점수 배정
     if (selection == 'rw'):
         fitness          = fitness_function(cost, population_size)
-    else:#elif(selection=='rb')
+    elif (selection == 'rb'):
         rank             = [[i] for i in range(1, len(cost)+1)]
         fitness          = fitness_function(rank, population_size)
-    elite_ind        = elite_distance(population[0], distance_matrix, route = route)
+    elite_ind        = elite_distance(population[0], real_distance_matrix, route = route)
     cost             = copy.deepcopy(cost)
     elite_cst        = copy.deepcopy(cost[0][0])
     solution         = copy.deepcopy(population[0])
     print('Generation = ', count, ' Distance = ', elite_ind, ' f(x) = ', round(elite_cst, 2)) 
-    while (count <= generations-1): 
+    while (count <= generations-1):
         offspring        = breeding(cost, population, fitness, distance_matrix, n_depots, elite, velocity, max_capacity, fixed_cost, variable_cost, penalty_value, time_window, parameters, route, vehicle_types, fleet_size,real_distance_matrix, fleet_used=fleet_used)          
         offspring        = mutation(offspring, mutation_rate = mutation_rate, elite = elite)
         cost, population = target_function(offspring, distance_matrix, parameters, velocity, fixed_cost, variable_cost, max_capacity, penalty_value, time_window = time_window, route = route, fleet_size = fleet_size,real_distance_matrix=real_distance_matrix, fleet_used=fleet_used)
         cost, population = (list(t) for t in zip(*sorted(zip(cost, population))))
-        elite_child      = elite_distance(population[0], distance_matrix, route = route)    #elite는 그대로
+        elite_child      = elite_distance(population[0], real_distance_matrix, route = route)    #elite는 그대로
         if (selection == 'rw'):
             fitness = fitness_function(cost, population_size)
         elif (selection == 'rb'):
@@ -646,3 +646,5 @@ def genetic_algorithm_vrp(coordinates, distance_matrix, parameters, velocity, fi
 
     print('Algorithm Time: ', round((end - start), 2), ' seconds')
     return solution_report, solution, fleet_used_now
+
+   ############################################################################
