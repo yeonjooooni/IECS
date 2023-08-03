@@ -11,7 +11,7 @@ import time as tm
 from itertools import cycle
 from matplotlib import pyplot as plt
 plt.style.use('bmh')
-fleet_used = [0,0,0,0,0]
+
 ############################################################################
 # Function: Tour Plot
 def plot_tour_coordinates (coordinates, solution, n_depots, route, size_x = 10, size_y = 10):
@@ -185,7 +185,7 @@ def evaluate_depot(n_depots, individual, real_distance_matrix):
     return individual
 
 # Function: Routes Best Vehicle
-def evaluate_vehicle(vehicle_types, individual, distance_matrix, parameters, velocity, fixed_cost, variable_cost, capacity, penalty_value, time_window, route,real_distance_matrix, fleet_size, fleet_used=fleet_used):
+def evaluate_vehicle(vehicle_types, individual, distance_matrix, parameters, velocity, fixed_cost, variable_cost, capacity, penalty_value, time_window, route,real_distance_matrix, fleet_size, fleet_used):
     cost, _     = target_function([individual], distance_matrix, parameters, velocity, fixed_cost, variable_cost, capacity, penalty_value, time_window, route,real_distance_matrix, fleet_size, fleet_used = fleet_used) 
     individual_ = copy.deepcopy(individual)
     for i in range(0, len(individual[0])):
@@ -235,7 +235,7 @@ def cap_break(vehicle_types, individual, parameters, capacity):
     return individual
 
 # Function: Solution Report
-def show_report(solution, distance_matrix,  parameters, velocity, fixed_cost, variable_cost, route, time_window,real_distance_matrix, fleet_used=fleet_used):
+def show_report(solution, distance_matrix,  parameters, velocity, fixed_cost, variable_cost, route, time_window,real_distance_matrix, fleet_used):
     column_names = ['Route', 'Vehicle', 'Activity', 'Job_도착지점의 index', 'Arrive_Load', 'Leave_Load', 'Wait_Time', 'Arrive_Time','Leave_Time', 'Distance', 'Costs']
     tt           = 0
     td           = 0 
@@ -292,7 +292,7 @@ def show_report(solution, distance_matrix,  parameters, velocity, fixed_cost, va
 
 # Function: Route Evalution & Correction
 # 각 population의 cost만 계산
-def target_function(population, distance_matrix, parameters, velocity, fixed_cost, variable_cost, capacity, penalty_value, time_window, route, real_distance_matrix, fleet_size = [], fleet_used=fleet_used):
+def target_function(population, distance_matrix, parameters, velocity, fixed_cost, variable_cost, capacity, penalty_value, time_window, route, real_distance_matrix, fleet_size = [], fleet_used = [0,0,0,0,0]):
     cost     = [[0] for i in range(len(population))]
     tw_late  = parameters[:, 2]
     tw_st    = parameters[:, 3]
@@ -596,7 +596,7 @@ def elite_distance(individual, distance_matrix, route):
     return round(td,2)
 
 # GA-VRP Function
-def genetic_algorithm_vrp(coordinates, distance_matrix, parameters, velocity, fixed_cost, variable_cost, capacity, real_distance_matrix, population_size = 5, vehicle_types = 1, n_depots = 1, route = 'closed', model = 'vrp', time_window = 'without', fleet_size = [], mutation_rate = 0.1, elite = 0, generations = 50, penalty_value = 1000, graph = True, selection = 'rw', fleet_used = fleet_used):    
+def genetic_algorithm_vrp(coordinates, distance_matrix, parameters, velocity, fixed_cost, variable_cost, capacity, real_distance_matrix, population_size = 5, vehicle_types = 1, n_depots = 1, route = 'closed', model = 'vrp', time_window = 'without', fleet_size = [], mutation_rate = 0.1, elite = 0, generations = 50, penalty_value = 1000, graph = True, selection = 'rw', fleet_used = [0,0,0,0,0]):    
     start           = tm.time()
     count           = 0
     solution_report = ['None']
@@ -614,7 +614,7 @@ def genetic_algorithm_vrp(coordinates, distance_matrix, parameters, velocity, fi
     cost             = copy.deepcopy(cost)
     elite_cst        = copy.deepcopy(cost[0][0])
     solution         = copy.deepcopy(population[0])
-    print('Generation = ', count, ' Distance = ', elite_ind, ' f(x) = ', round(elite_cst, 2)) 
+    #print('Generation = ', count, ' Distance = ', elite_ind, ' f(x) = ', round(elite_cst, 2)) 
     while (count <= generations-1):
         offspring        = breeding(cost, population, fitness, distance_matrix, n_depots, elite, velocity, max_capacity, fixed_cost, variable_cost, penalty_value, time_window, parameters, route, vehicle_types, fleet_size,real_distance_matrix, fleet_used=fleet_used)          
         offspring        = mutation(offspring, mutation_rate = mutation_rate, elite = elite)
@@ -631,7 +631,7 @@ def genetic_algorithm_vrp(coordinates, distance_matrix, parameters, velocity, fi
             solution  = copy.deepcopy(population[0])
             elite_cst = copy.deepcopy(cost[0][0])
         count = count + 1  
-        print('Generation = ', count, ' Distance = ', elite_ind, ' f(x) = ', round(elite_cst, 2))
+        #print('Generation = ', count, ' Distance = ', elite_ind, ' f(x) = ', round(elite_cst, 2))
     if (graph == True):
         plot_tour_coordinates(coordinates, solution, n_depots = n_depots, route = route)
 
@@ -643,8 +643,9 @@ def genetic_algorithm_vrp(coordinates, distance_matrix, parameters, velocity, fi
 
     solution_report = show_report(solution, distance_matrix, parameters, velocity, fixed_cost, variable_cost, route = route, time_window  = time_window,real_distance_matrix=real_distance_matrix, fleet_used=fleet_used)
     end = tm.time()
-
+    print('Generation = ', count, ' Distance = ', elite_ind, ' f(x) = ', round(elite_cst, 2)) #원래 이 출력 없음
     print('Algorithm Time: ', round((end - start), 2), ' seconds')
     return solution_report, solution, fleet_used_now
 
    ############################################################################
+
