@@ -1,132 +1,120 @@
+#필요 Library import
 import pandas as pd
-import random
 import numpy as np
-import copy
-import os
 import time as tm
-import numpy as np
 from itertools import cycle
 from matplotlib import pyplot as plt
 from pyVRP import *
-od_df = pd.read_csv('./과제3 실시간 주문 대응 Routing 최적화 (od_matrix) 수정완료.csv')
+
+demand_df = pd.read_csv('./과제3 실시간 주문 대응 Routing 최적화 (orders_table) 수정완료.csv', encoding='cp949')
 
 pivot_table = pd.read_csv("./pivot_table_filled.csv", encoding='cp949', index_col=[0])
 
 real_distance_matrix = pd.read_csv("./distance_matrix.csv", index_col=0)
 
-demand_df = pd.read_csv('./과제3 실시간 주문 대응 Routing 최적화 (orders_table) 수정완료.csv', encoding='cp949')
-# for i in range(1, 6):
-#     for j in range(4):
-tmp_df = demand_df[demand_df['date']=='2023-05-02']
-tmp_df = tmp_df[tmp_df['Group'].isin([0])]
-tmp_df = tmp_df[tmp_df['터미널ID']=='O_179']
 
-id_list_only_in_tmp_df = list(set(tmp_df['터미널ID'].values.tolist() + tmp_df['착지ID'].values.tolist()))
-pivot_table = pivot_table.loc[id_list_only_in_tmp_df,id_list_only_in_tmp_df]
-pivot_table = pivot_table.sort_index(axis=1, ascending=False)
-pivot_table = pivot_table.sort_index(axis=0,  ascending=False)
+def preprocess(terminal_ID, day, group_num): #날짜와 그룹을 주면 필요 df뽑아오기 
+    terminal_demand = demand_df[demand_df['터미널ID']==terminal_ID]
+    target_df = terminal_demand[terminal_demand['date']==f'2023-05-0{2+day}']
+    target_df = target_df[target_df['Group'].isin([group_num])]
 
-# '착지_ID'열의 각 값의 인덱스를 담을 리스트 초기화
-index_positions = [list(pivot_table.index).index("O_179")]
-cbm_list = [0]
+    #필요한 node들의 matrix만 가져오기
+    id_list = list(set(target_df['터미널ID'].values.tolist() + target_df['착지ID'].values.tolist()))
+    pivot_table = pivot_table.loc[id_list]
+    pivot_table = pivot_table.sort_index(axis=1, ascending=False)
+    pivot_table = pivot_table.sort_index(axis=0, ascending=False)
 
-# tmp_df의 '착지_ID'열의 각 값에 대해 pivot_table.index 리스트의 인덱스를 찾습니다.
-for i in range(len(tmp_df)):
-    value = tmp_df['착지ID'].values.tolist()[i]
-    index_positions.append(list(pivot_table.index).index(value))
-    cbm_list.append(float(tmp_df['CBM'].values[i]))
+    # 각 물건 적재용량 list로 만들기
+    index_positions = [list(pivot_table.index).index(terminal_ID)]
+    cbm_list = [0]
+    
+    
+    for i in range(len(target_df)):
+        value = target_df.iloc[i]['착지ID']
+        index_positions.append(list(pivot_table.index).index(value))
+        cbm_list.append(float(target_df.iloc[i]['CBM']))
 
-departure_coordinates = demand_df.drop_duplicates(['착지ID'])[['착지ID', '하차지_위도', '하차지_경도']]
-departure_coordinates.columns = ['ID', 'y', 'x']
-origin_coordinates = pd.read_csv("./과제3 실시간 주문 대응 Routing 최적화 (Terminals).csv", encoding='cp949', usecols = [0,1,2])
-origin_coordinates.columns = departure_coordinates.columns
-coordinates = pd.concat([departure_coordinates, origin_coordinates], ignore_index=True)
-coordinates = coordinates.set_index(['ID'])
-coordinates = coordinates.reindex(index=pivot_table.index)
-coordinates = coordinates.loc[id_list_only_in_tmp_df].sort_index(ascending=False).reset_index(drop=True)
+    return target_df, pivot_table, index_positions, cbm_list
 
-# 시간을 분 단위로 변환하는 함수
+
+#좌표 설정 함수
+def set_coordinates(pivot_table, id_list,df=demand_df):
+    departure_coordinates = df.drop_duplicates(['착지ID'])[['착지ID', '하차지_위도', '하차지_경도']]
+    departure_coordinates.columns = ['ID','y','x']
+    
+    origin_coordinates = pd.read_csv("./과제3 실시간 주문 대응 Routing 최적화 (Terminals).csv", encoding='cp949', usecols = [0,1,2])
+    origin_coordinates.columns = departure_coordinates.columns
+    coordinates = pd.concat([departure_coordinates, origin_coordinates], ignore_index=True)
+    coordinates = coordinates.set_index(['ID'])
+    coordinates = coordinates.reindex(index=pivot_table.index)
+    coordinates = coordinates.loc[id_list].sort_index(ascending=False).reset_index(drop=True)
+
+    return coordinates
+
+
 def time_to_minutes(time_str):
-    hour, minute = map(int, time_str.split(':'))
-    return hour * 60 + minute
+    hour,minute = map(int, time_str.split(':'))
+    return hour*60 + minute
 
-# 3일간의 하차 가능 시작과 끝 시간 리스트를 구하는 함수
-# 여기서 이미 time_window와 무관하게 3일차(4320분)에 딱 cut하도록 만들어 놓음
-def get_trip_time_lists(start_time, end_time, num_days=3):
+def get_trip_time_lists(start_time, end_time, day, group, num_days=3)
     start_time_minutes = time_to_minutes(start_time)
     end_time_minutes = time_to_minutes(end_time)
+
+    if start_time_minutes > end_time_minutes:
+        end_time_minutes += 1440
+
+    start_time_minutes -= 1440 * day  +  360 * group
+    end_time_minutes   -= 1440 * day  +  360 * group
+
+
+    while start_time_minutes < 0:
+        start_time_minutes += 1440
+        end_time_minutes   += 1440
     
     start_list = []
-    end_list = []
-    
+    end_list   = []
+
     for day in range(num_days):
         if start_time_minutes + day * 24 * 60 > 4320:
             start_list.append(4320)
         else:
-            start_list.append((start_time_minutes + day * 24 * 60) )
+            start_list.append((start_time_minutes + day * 24 * 60))
         
-        if start_time_minutes > end_time_minutes:
-            if end_time_minutes + (day+1) * 24 * 60 > 4320:
-                end_list.append(4320)
-            else:
-                end_list.append((end_time_minutes + (day+1) * 24 * 60))
+        if end_time_minutes + day * 24 * 60 > 4320:
+            end_list.append(4320)
         else:
-            if end_time_minutes + day * 24 * 60 > 4320:
-                end_list.append(4320)
-            else:
-                end_list.append((end_time_minutes + day * 24 * 60) )
-        
+            end_list.append((end_time_minutes + day * 24 * 60))
+    
     return start_list, end_list
 
-# 3일간의 하차 가능 시작과 끝 시간 리스트 계산
-trip_start_times = [[0,0,0]]
-trip_end_times = [[4320,4320,4320]]
+def make_parameters(terminal_ID, day, group_num):
 
-for idx, row in tmp_df.iterrows():
-    start_time = row['하차가능시간_시작']
-    end_time = row['하차가능시간_종료']
-    start_list, end_list = get_trip_time_lists(start_time, end_time)
-    trip_start_times.append(start_list)
-    trip_end_times.append(end_list)
+    target_df, pivot_table, index_positions, cbm_list = preprocess(terminal_ID, day, group_num)
 
-parameters = pd.DataFrame({
-    'arrive_station': index_positions,
-    'TW_early':trip_start_times,
-    'TW_late':trip_end_times,
-    'TW_service_time':60,
-    'TW_wait_cost':0,
-    'cbm':cbm_list
+    coordinates = set_coordinates(pivot_table, index_positions)
+
+    trip_start_times = [[0,0,0]]
+    trip_end_times = [[4320,4320,4320]]
+
+    for idx, row in target_df.itterrows():
+        start_time = row['하차가능시간_시작']
+        end_time = row['하차가능시간_종료']
+
+        start_list, end_list = get_trip_time_lists(start_time, end_time, day, group_num)
+
+        trip_start_times.append(start_list)
+        trip_end_times.append(end_list)
+
+    parameters = pd.DataFrame({
+        'arrive_station': index_positions,
+        'TW_early':trip_start_times,
+        'TW_late':trip_end_times,
+        'TW_service_time':60,
+        'TW_wait_cost':0,
+        'cbm':cbm_list
 })
+    return parameters, coordinates.values, pivot_table.values
 
-# Tranform to Numpy Array
-coordinates = coordinates.values
-parameters  = parameters.values
-distance_matrix = pivot_table.values
-real_distance_matrix = real_distance_matrix.values
-
-# Parameters - Model
-n_depots    =  1          # The First n Rows of the 'distance_matrix' or 'coordinates' are Considered as Depots
-time_window = 'with'    # 'with', 'without'
-route       = 'closed'     # 'open', 'closed'
-model       = 'vrp'        # 'tsp', 'mtsp', 'vrp'
-graph       = True        # True, False
-
-# Parameters - Vehicle
-vehicle_types = 5                           # Quantity of Vehicle Types
-fixed_cost    = [ 80,110,150,200,250 ]      # Fixed Cost
-variable_cost = [ 0.8,1,1.2,1.5,1.8 ]      # Variable Cost
-capacity      = [ 27,33,42,51,55 ]      # Capacity of the Vehicle
-velocity      = [ 1,1,1,1,1 ]      # The Average Velocity Value is Used as a Constant that Divides the Distance Matrix.
-fleet_size    = [ 10,10,10,10,10 ]      # Available Vehicles
-
-# Parameters - GA
-penalty_value   = 1000000    # GA Target Function Penalty Value for Violating the Problem Constraints
-population_size = 10      # GA Population Size
-mutation_rate   = 0.2     # GA Mutation Rate
-elite           = 1        # GA Elite Member(s) - Total Number of Best Individual(s) that (is)are Maintained 
-generations     = 100     # GA Number of Generations
-
-fleet_used = [0,0,0,0,0]
-# Run GA Function
-ga_report, ga_vrp = genetic_algorithm_vrp(coordinates, distance_matrix, parameters, velocity, fixed_cost, variable_cost, capacity, real_distance_matrix, population_size, vehicle_types, n_depots, route, model, time_window, fleet_size, mutation_rate, elite, generations, penalty_value, graph, fleet_used)
-print(ga_report)
+for day in range(7):
+    for group in range(4):
+        parameters, coordinates, distance_matrix = make_parameters("O_179",day,group)
