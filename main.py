@@ -52,7 +52,7 @@ def get_trip_time_lists(start_time, end_time, day, group, num_days=3): #수정�
 def get_checked_fleet_cnt(vehicles_within_intervals):
     checked_fleet_cnt = 0
     for i in vehicles_within_intervals.values():
-        for j in i.values():
+        for j in i:
             checked_fleet_cnt += j
     return checked_fleet_cnt
 
@@ -61,8 +61,7 @@ fleet_size_no_fixed_cost = {}
 for time_duration in range(0, 28 * 360, 360):
     fleet_size_dict[time_duration] = [10, 10, 10, 10, 10]
     fleet_size_no_fixed_cost[time_duration] = [0, 0, 0, 0, 0]
-
-
+     
 for day in range(6):
     for group in range(4):
         time_absolute = 1440 * day  +  360 * group
@@ -164,7 +163,7 @@ for day in range(6):
 
         time_block = 6 * 60
         while get_checked_fleet_cnt(vehicles_within_intervals) < sum(fleet_used_now):
-            vehicles_within_intervals_for_one_block = {i: 0 for i in range(5)}
+            vehicles_within_intervals_for_one_block = [0]*5
 
             for route, group in clean_report.groupby(['Route']):
                 last_row = group.iloc[-1]
@@ -176,7 +175,7 @@ for day in range(6):
             time_block += 6 * 60
 
         print("사용한 차량의 복귀 시간대")
-        print(vehicles_within_intervals)
+        print(vehicles_within_intervals, fleet_used_now)
         print("####################################")
 
         # 갔다 돌아와서 쓸 수 있는 차량 대수인 fleet size 없데이트
@@ -185,11 +184,12 @@ for day in range(6):
             if time_duration >= 360 + time_absolute:
                 fleet_size_dict[time_duration] = [size - used for size, used in zip(fleet_size_dict[time_duration], fleet_used_now)]
         ## 돌아온거 더함
-        for time_criteria, vehicles_dict in vehicles_within_intervals.items():
-            for interval_time in fleet_size_dict:
-                if interval_time > time_criteria:
-                    for vehicle_type, count in vehicles_dict.items():
-                        fleet_size_dict[interval_time][vehicle_type] = max(fleet_size_dict[interval_time][vehicle_type] + count, 0)
+        for return_time, vehicles_dict in vehicles_within_intervals.items(): # time criteria: 차량이 돌아오는 시간들
+            for time_in_terminal in fleet_size_dict:
+                if time_in_terminal >= return_time:
+                    for vehicle_type in range(5):
+                        count = vehicles_dict[vehicle_type]
+                        fleet_size_dict[time_in_terminal][vehicle_type] += count
 
         print("사용 가능한 차량 현황")
         print(fleet_size_dict)
@@ -211,11 +211,12 @@ for day in range(6):
             if time_duration >= 360 + time_absolute:
                 fleet_size_no_fixed_cost[time_duration] = [size - used for size, used in zip(fleet_size_no_fixed_cost[time_duration], fleet_size_no_fixed_cost_now)]
         ## 돌아온거 더함
-        for time_criteria, vehicles_dict in vehicles_within_intervals.items():
-            for interval_time in fleet_size_no_fixed_cost:
-                if interval_time > time_criteria:
-                    for vehicle_type, count in vehicles_dict.items():
-                        fleet_size_no_fixed_cost[interval_time][vehicle_type] = min(fleet_size_no_fixed_cost[interval_time][vehicle_type] + count, 10)
+        for return_time, vehicles_dict in vehicles_within_intervals.items():
+            for time_in_terminal in fleet_size_no_fixed_cost:
+                if time_in_terminal >= return_time:
+                    for vehicle_type in range(5):
+                        count = vehicles_dict[vehicle_type]
+                        fleet_size_no_fixed_cost[time_in_terminal][vehicle_type] = min(fleet_size_no_fixed_cost[time_in_terminal][vehicle_type] + count, 10)
 
         print("사용 가능한 고정비 없는 차량 현황")
         print(fleet_size_no_fixed_cost)
