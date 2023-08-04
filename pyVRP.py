@@ -620,7 +620,7 @@ def genetic_algorithm_vrp(coordinates, distance_matrix, parameters, velocity, fi
     cost             = copy.deepcopy(cost)
     elite_cst        = copy.deepcopy(cost[0][0])
     solution         = copy.deepcopy(population[0])
-    print('Generation = ', count, ' Distance = ', elite_ind, ' f(x) = ', round(elite_cst, 2)) 
+    #print('Generation = ', count, ' Distance = ', elite_ind, ' f(x) = ', round(elite_cst, 2)) 
     while (count <= generations-1):
         offspring        = breeding(cost, population, fitness, distance_matrix, n_depots, elite, velocity, max_capacity, fixed_cost, variable_cost, penalty_value, time_window, parameters, route, vehicle_types, fleet_size,real_distance_matrix, fleet_used=glb_fleet_used)          
         offspring        = mutation(offspring, mutation_rate = mutation_rate, elite = elite)
@@ -637,7 +637,7 @@ def genetic_algorithm_vrp(coordinates, distance_matrix, parameters, velocity, fi
             solution  = copy.deepcopy(population[0])
             elite_cst = copy.deepcopy(cost[0][0])
         count = count + 1  
-        print('Generation = ', count, ' Distance = ', elite_ind, ' f(x) = ', round(elite_cst, 2))
+        #print('Generation = ', count, ' Distance = ', elite_ind, ' f(x) = ', round(elite_cst, 2))
     if (graph == True):
         plot_tour_coordinates(coordinates, solution, n_depots = n_depots, route = route)
 
@@ -652,7 +652,7 @@ def genetic_algorithm_vrp(coordinates, distance_matrix, parameters, velocity, fi
 
     solution_report = show_report(solution, distance_matrix, parameters, velocity, fixed_cost, variable_cost, route = route, time_window  = time_window,real_distance_matrix=real_distance_matrix, fleet_used=glb_fleet_used)
     end = tm.time()
-
+    print('Generation = ', count, ' Distance = ', elite_ind, ' f(x) = ', round(elite_cst, 2)) #원래 이 출력 없음
     print('Algorithm Time: ', round((end - start), 2), ' seconds')
     return solution_report, solution, fleet_used_now
 

@@ -23,7 +23,7 @@ def output_report(solution, distance_matrix, parameters, velocity, fixed_cost, v
         cost = evaluate_cost(dist, wait, parameters, solution[0][i], solution[1][i], fixed_cost = [fixed_cost[solution[2][i][0]]], variable_cost = [variable_cost[solution[2][i][0]]], time_window = time_window)
         if (route == 'closed'):
             subroute = [solution[0][i] + solution[1][i] + solution[0][i]]
-        elif (route == 'open'):
+        else: #elif (route == 'open'):
             subroute = [solution[0][i] + solution[1][i]]
         
         for j in range(0, len(subroute[0])):
@@ -42,6 +42,13 @@ def output_report(solution, distance_matrix, parameters, velocity, fixed_cost, v
                 tc = tc + cost[j]
             
             # Prepare data for the Delivered column
+            # 우리는 아직 service가 마무리 안된 건수가 없음. 그리고 finish는 출력할 필요 없음
+            if activity == 'start':
+                delivered_status = 'Null'
+            elif activity == 'service':
+                delivered_status = 'Yes'
+            else:#delivered_status = finish, 우리가 보려고 표시한 return한 차량
+                continue
             delivered_status = 'Null' if activity == 'start' else 'Yes' if activity == 'finish' else 'No'
             
             report_lst.append([solution[2][i][0], 'VEH_' + str(solution[2][i][0]), j+1, subroute[0][j], arrive_time, round(wait[j], 2), round(time[j], 2) if activity != 'start' else 'Null', round(time[j], 2) if activity == 'finish' else 'Null', delivered_status])
