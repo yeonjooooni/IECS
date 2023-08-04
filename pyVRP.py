@@ -355,15 +355,16 @@ def target_function(population, distance_matrix, parameters, velocity, fixed_cos
 
 # Function: Initial Population
 # CBM만 넘지 않게 일단일단 차량 배정
-def initial_population(parameters, coordinates='none', distance_matrix='none', population_size=5, vehicle_types=1, n_depots=1, model='vrp', capacity = [20,30,40,40,50]):
+def initial_population(parameters, coordinates='none', distance_matrix='none', population_size=5, vehicle_types=1, n_depots=1, model='vrp', capacity = [20,30,40,40,50], fleet_size = [0,0,0,0,0]):
 
     # Exclude clients with demand equal to 0
     # 1, 2, 3, ..., 한 터미널의 날짜의 그룹의 주문의 개수
     non_zero_demand_clients = [i for i in range(1, len(parameters[:,0]))] #[client for client in range(n_depots, distance_matrix.shape[0]) if coordinates[client][0] != 0]
     depots = [[i] for i in range(n_depots)]
-    vehicles = [[i] for i in range(vehicle_types)]
+    vehicles = [[i] for i in range(vehicle_types) if fleet_size[i]>0]
     population = []
-
+    print(f"처리해야하는 물량: {len(non_zero_demand_clients)}")
+    print(f"현재 차: {fleet_size}")
     for i in range(population_size):
         clients_temp = copy.deepcopy(non_zero_demand_clients)  # Use the filtered clients with non-zero demand
         
@@ -371,12 +372,17 @@ def initial_population(parameters, coordinates='none', distance_matrix='none', p
         routes = []
         routes_depot = []
         routes_vehicles = []
-
+        fleet_size_check = copy.deepcopy(fleet_size)
         while len(clients_temp) > 0:
+            l
             e = random.sample(vehicles, 1)[0]
+
+            while fleet_size_check[e[0]]<=0:
+                e = random.sample(vehicles,1)[0]
             d = random.sample(depots, 1)[0]
-            c = random.sample(clients_temp, random.randint(1, len(clients_temp)))
+            c = random.sample(clients_temp, random.randint(1, min(3,len(clients_temp))))
             # 차량 적재량 넘으면 다시 돌리기
+
             if sum([parameters[:, 5][int(i)] for i in c]) > capacity[int(e[0])]:
                 continue
 
@@ -388,6 +394,7 @@ def initial_population(parameters, coordinates='none', distance_matrix='none', p
             routes_vehicles.append(e)
             routes_depot.append(d)
             routes.append(tmp)
+            fleet_size_check[e[0]]-=1
             clients_temp = [item for item in clients_temp if item not in c]
 
         population.append([routes_depot, routes, routes_vehicles])
@@ -601,7 +608,7 @@ def genetic_algorithm_vrp(coordinates, distance_matrix, parameters, velocity, fi
     count           = 0
     solution_report = ['None']
     max_capacity    = copy.deepcopy(capacity)
-    population       = initial_population(parameters, coordinates, distance_matrix, population_size = population_size, vehicle_types = vehicle_types, n_depots = n_depots, model = model, capacity = capacity)   
+    population       = initial_population(parameters, coordinates, distance_matrix, population_size = population_size, vehicle_types = vehicle_types, n_depots = n_depots, model = model, capacity = capacity, fleet_size=fleet_size)   
     cost, population = target_function(population, distance_matrix, parameters, velocity, fixed_cost, variable_cost, max_capacity, penalty_value, time_window = time_window, route = route, fleet_size = fleet_size, real_distance_matrix=real_distance_matrix,fleet_used=fleet_used) 
     cost, population = (list(t) for t in zip(*sorted(zip(cost, population))))
     # 기존 코드, finess_function을 통해 각 경우의 population에 점수 배정
