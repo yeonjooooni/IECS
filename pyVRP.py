@@ -10,6 +10,7 @@ import time as tm
 
 from itertools import cycle
 from matplotlib import pyplot as plt
+from utils import *
 plt.style.use('bmh')
 glb_fleet_used = []
 ############################################################################
@@ -235,7 +236,7 @@ def cap_break(vehicle_types, individual, parameters, capacity):
     return individual
 
 # Function: Solution Report
-def show_report(solution, distance_matrix,  parameters, velocity, fixed_cost, variable_cost, route, time_window,real_distance_matrix, fleet_used=glb_fleet_used):
+def show_report(solution, distance_matrix,  parameters, velocity, fixed_cost, variable_cost, route, time_window, real_distance_matrix, fleet_used, time_absolute):
     column_names = ['Route', 'Vehicle', 'Activity', 'Job_도착지점의 index', 'Arrive_Load', 'Leave_Load', 'Wait_Time', 'Arrive_Time','Leave_Time', 'Distance', 'Costs']
     tt           = 0
     td           = 0 
@@ -290,7 +291,7 @@ def show_report(solution, distance_matrix,  parameters, velocity, fixed_cost, va
     report_df = pd.DataFrame(report_lst, columns = column_names)
     return report_df
 
-def output_report(solution, distance_matrix, parameters, velocity, fixed_cost, variable_cost, route, time_window):
+def output_report(solution, distance_matrix, parameters, velocity, fixed_cost, variable_cost, route, time_window, time_absolute):
     column_names = ['ORD_NO', 'VehicleID', 'Sequence', 'SiteCode', 'ArrivalTime', 'WaitingTime', 'ServiceTime', 'DepartureTime', 'Delivered']
     tt = 0
     td = 0 
@@ -339,8 +340,8 @@ def output_report(solution, distance_matrix, parameters, velocity, fixed_cost, v
             # # Prepare data for the Delivered column
             # # 우리는 아직 service가 마무리 안된 건수가 없음. 그리고 finish는 출력할 필요 없음
             #activity = finish, 우리가 보려고 표시한 return한 차량
-            
-            report_lst.append([solution[2][i][0], 'VEH_' + str(solution[2][i][0]), j+1, subroute[0][j], arrive_time, round(wait[j], 2), round(time[j], 2) if activity != 'start' else 'Null', round(time[j], 2) if activity == 'service' else 'Null', delivered_status])
+            report_lst.append([solution[2][i][0], 'VEH_' + str(solution[2][i][0]), j+1, subroute[0][j], 
+                               min_to_day(arrive_time+time_absolute), round(wait[j], 2)+time_absolute, round(time[j], 2)+time_absolute if activity != 'start' else 'Null', min_to_day(round(time[j], 2)+time_absolute) if activity == 'service' else 'Null', delivered_status])
         
         report_lst.append(['-//-', '-//-', '-//-', '-//-', '-//-', '-//-', '-//-', '-//-', '-//-'])
     
@@ -419,7 +420,6 @@ def initial_population(parameters, coordinates='none', distance_matrix='none', p
     # 1, 2, 3, ..., 한 터미널의 날짜의 그룹의 주문의 개수
     non_zero_demand_clients = [i for i in range(1, len(parameters[:,0]))] #[client for client in range(n_depots, distance_matrix.shape[0]) if coordinates[client][0] != 0]
     depots = [[i] for i in range(n_depots)]
-    print(len(fleet_size))
     vehicles = [[i] for i in range(vehicle_types) if fleet_size[i]>0]
     population = []
     print(f"처리해야하는 물량: {len(non_zero_demand_clients)}")
@@ -445,6 +445,7 @@ def initial_population(parameters, coordinates='none', distance_matrix='none', p
 
             tmp = []
             # 차량 배정
+            # 주문 배정도 되도록 수정
             for idx in c:                
                 tmp.append(int(parameters[:,0][int(idx)]))
             
@@ -660,7 +661,7 @@ def elite_distance(individual, distance_matrix, route):
     return round(td,2)
 
 # GA-VRP Function
-def genetic_algorithm_vrp(coordinates, distance_matrix, parameters, velocity, fixed_cost, variable_cost, capacity, real_distance_matrix, population_size = 5, vehicle_types = 1, n_depots = 1, route = 'closed', model = 'vrp', time_window = 'without', fleet_size = [], mutation_rate = 0.1, elite = 0, generations = 50, penalty_value = 1000, graph = True, selection = 'rw', fleet_used=glb_fleet_used):    
+def genetic_algorithm_vrp(coordinates, distance_matrix, parameters, velocity, fixed_cost, variable_cost, capacity, real_distance_matrix, population_size = 5, vehicle_types = 1, n_depots = 1, route = 'closed', model = 'vrp', time_window = 'without', fleet_size = [], mutation_rate = 0.1, elite = 0, generations = 50, penalty_value = 1000, graph = True, selection = 'rw', fleet_used=glb_fleet_used, time_absolute=0):    
     start           = tm.time()
     count           = 0
     solution_report = ['None']
@@ -708,8 +709,8 @@ def genetic_algorithm_vrp(coordinates, distance_matrix, parameters, velocity, fi
     # for route_list in solution[1]:
     #     if route_list[1]< :
 
-    solution_report = show_report(solution, distance_matrix, parameters, velocity, fixed_cost, variable_cost, route = route, time_window  = time_window,real_distance_matrix=real_distance_matrix, fleet_used=fleet_used)
-    output = output_report(solution, distance_matrix, parameters, velocity, fixed_cost, variable_cost, route, time_window)
+    solution_report = show_report(solution, distance_matrix, parameters, velocity, fixed_cost, variable_cost, route, time_window, real_distance_matrix, fleet_used, time_absolute)
+    output = output_report(solution, distance_matrix, parameters, velocity, fixed_cost, variable_cost, route, time_window, time_absolute)
     
     end = tm.time()
     print('Generation = ', count, ' Distance = ', elite_ind, ' f(x) = ', round(elite_cst, 2)) #원래 이 출력 없음

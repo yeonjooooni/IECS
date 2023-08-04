@@ -70,3 +70,12 @@ def reusable_vehicle(clean_report, fleet_size_no_fixed_cost, vehicle_types, vehi
     print(fleet_size_no_fixed_cost)
     print("####################################")
     return fleet_size_no_fixed_cost
+
+def min_to_day(minute):
+    #minute으로 받은 거 해당 날짜로 바꿔주는 format
+    minute = int(round(minute, 0))
+    hr = minute // 60
+    minute = str(minute % 60)
+    day = "2023-05-0{}".format(1+hr//24)
+    hr = str(hr % 24)
+    return day+" "+hr.zfill(2)+":"+minute.zfill(2)
