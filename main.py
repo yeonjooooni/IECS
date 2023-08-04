@@ -60,6 +60,7 @@ def get_trip_time_lists(start_time, end_time, num_days=3):
     start_time_minutes = time_to_minutes(start_time)
     end_time_minutes = time_to_minutes(end_time)
 
+
     start_list = []
     end_list = []
     
@@ -68,6 +69,7 @@ def get_trip_time_lists(start_time, end_time, num_days=3):
             start_list.append(4320)
         else:
             start_list.append((start_time_minutes + day * 24 * 60) )
+
 
         if start_time_minutes > end_time_minutes:
             if end_time_minutes + (day+1) * 24 * 60 > 4320:
@@ -79,6 +81,7 @@ def get_trip_time_lists(start_time, end_time, num_days=3):
                 end_list.append(4320)
             else:
                 end_list.append((end_time_minutes + day * 24 * 60) )
+
 
     return start_list, end_list
 
