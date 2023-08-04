@@ -8,6 +8,7 @@ import numpy as np
 from itertools import cycle
 from matplotlib import pyplot as plt
 from pyVRP import *
+from output import *
 od_df = pd.read_csv('./과제3 실시간 주문 대응 Routing 최적화 (od_matrix) 수정완료.csv')
 
 pivot_table = pd.read_csv("./pivot_table_filled.csv", encoding='cp949', index_col=[0])
@@ -15,6 +16,9 @@ pivot_table = pd.read_csv("./pivot_table_filled.csv", encoding='cp949', index_co
 real_distance_matrix = pd.read_csv("./distance_matrix.csv", index_col=0)
 
 demand_df = pd.read_csv('./과제3 실시간 주문 대응 Routing 최적화 (orders_table) 수정완료.csv', encoding='cp949')
+veh_table = pd.read_csv('./과제3 실시간 주문 대응 Routing 최적화 (veh_table).csv', encoding='cp949')
+tmp_veh = veh_table[veh_table['StartCenter'] == 'O_179']
+
 # for i in range(1, 6):
 #     for j in range(4):
 tmp_df = demand_df[demand_df['date']=='2023-05-02']
@@ -55,7 +59,7 @@ def time_to_minutes(time_str):
 def get_trip_time_lists(start_time, end_time, num_days=3):
     start_time_minutes = time_to_minutes(start_time)
     end_time_minutes = time_to_minutes(end_time)
-    
+
     start_list = []
     end_list = []
     
@@ -64,7 +68,7 @@ def get_trip_time_lists(start_time, end_time, num_days=3):
             start_list.append(4320)
         else:
             start_list.append((start_time_minutes + day * 24 * 60) )
-        
+
         if start_time_minutes > end_time_minutes:
             if end_time_minutes + (day+1) * 24 * 60 > 4320:
                 end_list.append(4320)
@@ -75,7 +79,7 @@ def get_trip_time_lists(start_time, end_time, num_days=3):
                 end_list.append(4320)
             else:
                 end_list.append((end_time_minutes + day * 24 * 60) )
-        
+
     return start_list, end_list
 
 # 3일간의 하차 가능 시작과 끝 시간 리스트 계산
@@ -112,21 +116,23 @@ model       = 'vrp'        # 'tsp', 'mtsp', 'vrp'
 graph       = True        # True, False
 
 # Parameters - Vehicle
-vehicle_types = 5                           # Quantity of Vehicle Types
-fixed_cost    = [ 80,110,150,200,250 ]      # Fixed Cost
-variable_cost = [ 0.8,1,1.2,1.5,1.8 ]      # Variable Cost
-capacity      = [ 27,33,42,51,55 ]      # Capacity of the Vehicle
-velocity      = [ 1,1,1,1,1 ]      # The Average Velocity Value is Used as a Constant that Divides the Distance Matrix.
-fleet_size    = [ 10,10,10,10,10 ]      # Available Vehicles
+vehicle_types = tmp_veh.shape[0] # 해당 출발지에 속한 차량 수 전부
+fixed_cost    = tmp_veh['FixedCost'].values.tolist()
+variable_cost = tmp_veh['VariableCost'].values.tolist()
+capacity      = tmp_veh['MaxCapaCBM'].values.tolist()
+velocity      = [1] * vehicle_types # 전부 1
+fleet_size    = [1] * vehicle_types # 전부 1
 
 # Parameters - GA
 penalty_value   = 1000000    # GA Target Function Penalty Value for Violating the Problem Constraints
 population_size = 10      # GA Population Size
 mutation_rate   = 0.2     # GA Mutation Rate
 elite           = 1        # GA Elite Member(s) - Total Number of Best Individual(s) that (is)are Maintained 
-generations     = 100     # GA Number of Generations
+generations     = 2     # GA Number of Generations
 
-fleet_used = [0,0,0,0,0]
+fleet_used = [0]*vehicle_types
 # Run GA Function
-ga_report, ga_vrp = genetic_algorithm_vrp(coordinates, distance_matrix, parameters, velocity, fixed_cost, variable_cost, capacity, real_distance_matrix, population_size, vehicle_types, n_depots, route, model, time_window, fleet_size, mutation_rate, elite, generations, penalty_value, graph, fleet_used)
-print(ga_report)
+ga_report, ga_vrp, fleet_used = genetic_algorithm_vrp(coordinates, distance_matrix, parameters, velocity, fixed_cost, variable_cost, capacity, real_distance_matrix, population_size, vehicle_types, n_depots, route, model, time_window, fleet_size, mutation_rate, elite, generations, penalty_value, graph, fleet_used)
+output = output_report(ga_vrp, distance_matrix, parameters, velocity, fixed_cost, variable_cost, route, time_window)
+ga_report.to_csv('VRP-04-Report.csv', encoding= 'cp949', index = False)
+output.to_csv('output-01-Report.csv', encoding= 'cp949', index = False)
