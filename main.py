@@ -17,31 +17,36 @@ def time_to_minutes(time_str):
 
 # 3일간의 하차 가능 시작과 끝 시간 리스트를 구하는 함수
 # 여기서 이미 time_window와 무관하게 3일차(4320분)에 딱 cut하도록 만들어 놓음
-def get_trip_time_lists(start_time, end_time, num_days=3 , time_absolute=0):
+def get_trip_time_lists(start_time, end_time, day, group, num_days=3): #수정필요
     start_time_minutes = time_to_minutes(start_time)
     end_time_minutes = time_to_minutes(end_time)
-    
+
+    if start_time_minutes > end_time_minutes:
+        end_time_minutes += 1440
+
+    start_time_minutes -= 1440 * day  +  360 * group
+    end_time_minutes   -= 1440 * day  +  360 * group
+
+    while start_time_minutes < 0:
+        start_time_minutes += 1440
+        end_time_minutes   += 1440
+
     start_list = []
-    end_list = []
-    
+    end_list   = []
+
     for day in range(num_days):
-        if start_time_minutes + day * 24 * 60 > 4320:
-            start_list.append(4320 - time_absolute)
+        if start_time_minutes + day * 24 * 60 > 4320 - max(0, day - 4) * 1440:
+            start_list.append((4320 - max(0, day - 4) * 1440) - 360 * group - 1440 * (day-4) if day>=4 else (4320 - max(0, day - 4) * 1440))
         else:
-            start_list.append((start_time_minutes + day * 24 * 60) - time_absolute )
-            
-        if start_time_minutes > end_time_minutes:
-            if end_time_minutes + (day+1) * 24 * 60 > 4320:
-                end_list.append(4320 - time_absolute)
-            else:
-                end_list.append((end_time_minutes + (day+1) * 24 * 60) - time_absolute)
+            start_list.append((start_time_minutes + day * 24 * 60)- 360 * group - 1440 * (day-4) if day>=4 else (start_time_minutes + day * 24 * 60))
+
+        if end_time_minutes + day * 24 * 60 > 4320 - max(0, day - 4) * 1440:
+            end_list.append((4320 - max(0, day - 4) * 1440) - 360 * group - 1440 * (day-4) if day>=4 else (4320 - max(0, day - 4) * 1440))
         else:
-            if end_time_minutes + day * 24 * 60 > 4320:
-                end_list.append(4320 - time_absolute)
-            else:
-                end_list.append((end_time_minutes + day * 24 * 60) - time_absolute )     
+            end_list.append((end_time_minutes + day * 24 * 60)- 360 * group - 1440 * (day-4) if day>=4 else (end_time_minutes + day * 24 * 60))
 
     return start_list, end_list
+
 
 # 차량 대수 확인을 위한 함수
 def get_checked_fleet_cnt(vehicles_within_intervals):
@@ -57,19 +62,17 @@ for time_duration in range(0, 28 * 360, 360):
     fleet_size_dict[time_duration] = [10, 10, 10, 10, 10]
     fleet_size_no_fixed_cost[time_duration] = [0, 0, 0, 0, 0]
 
-time_absolute = 0
 
-demand_df = pd.read_csv('./과제3 실시간 주문 대응 Routing 최적화 (orders_table) 수정완료.csv', encoding='cp949')
-unique_dates = demand_df['date'].unique()
-for date in unique_dates:
+for day in range(6):
     for group in range(4):
+        time_absolute = 1440 * day  +  360 * group
 
         od_df = pd.read_csv('./과제3 실시간 주문 대응 Routing 최적화 (od_matrix) 수정완료.csv')
         pivot_table = pd.read_csv("./pivot_table_filled.csv", encoding='cp949', index_col=[0])
         real_distance_matrix = pd.read_csv("./distance_matrix.csv", index_col=0)
         demand_df = pd.read_csv('./과제3 실시간 주문 대응 Routing 최적화 (orders_table) 수정완료.csv', encoding='cp949')
 
-        tmp_df = demand_df[demand_df['date']=='2023-05-01']
+        tmp_df = demand_df[demand_df['date']==f'2023-05-0{1+day}']
         tmp_df = tmp_df[tmp_df['Group'].isin([group])]
         tmp_df = tmp_df[tmp_df['터미널ID']=='O_179']
 
@@ -99,13 +102,12 @@ for date in unique_dates:
 
         # 3일간의 하차 가능 시작과 끝 시간 리스트 계산
         trip_start_times = [[0,0,0]]
-        #trip_end_times = [[4320,4320,4320]]
-        trip_end_times = [[4320 - time_absolute for _ in range(3)]]
+        trip_end_times = [[(4320 - max(0, day - 4) * 1440) for _ in range(3)]]
 
         for idx, row in tmp_df.iterrows():
             start_time = row['하차가능시간_시작']
             end_time = row['하차가능시간_종료']
-            start_list, end_list = get_trip_time_lists(start_time, end_time, num_days=3 ,time_absolute=time_absolute)
+            start_list, end_list = get_trip_time_lists(start_time, end_time, day, group, num_days=3)
             trip_start_times.append(start_list)
             trip_end_times.append(end_list)
 
@@ -170,7 +172,7 @@ for date in unique_dates:
                     vehicle_type = last_row['Vehicle']
                     vehicles_within_intervals_for_one_block[vehicle_type] += 1
 
-            vehicles_within_intervals[time_block] = vehicles_within_intervals_for_one_block
+            vehicles_within_intervals[time_block + time_absolute] = vehicles_within_intervals_for_one_block
             time_block += 6 * 60
 
         print("사용한 차량의 복귀 시간대")
@@ -185,9 +187,9 @@ for date in unique_dates:
         ## 돌아온거 더함
         for time_criteria, vehicles_dict in vehicles_within_intervals.items():
             for interval_time in fleet_size_dict:
-                if interval_time >= time_criteria:
+                if interval_time > time_criteria:
                     for vehicle_type, count in vehicles_dict.items():
-                        fleet_size_dict[interval_time][vehicle_type] += count
+                        fleet_size_dict[interval_time][vehicle_type] = max(fleet_size_dict[interval_time][vehicle_type] + count, 0)
 
         print("사용 가능한 차량 현황")
         print(fleet_size_dict)
@@ -211,14 +213,11 @@ for date in unique_dates:
         ## 돌아온거 더함
         for time_criteria, vehicles_dict in vehicles_within_intervals.items():
             for interval_time in fleet_size_no_fixed_cost:
-                if interval_time >= time_criteria:
+                if interval_time > time_criteria:
                     for vehicle_type, count in vehicles_dict.items():
                         fleet_size_no_fixed_cost[interval_time][vehicle_type] = min(fleet_size_no_fixed_cost[interval_time][vehicle_type] + count, 10)
 
         print("사용 가능한 고정비 없는 차량 현황")
         print(fleet_size_no_fixed_cost)
         print("####################################")
-
-        time_absolute += 6 * 60
-
         print()
