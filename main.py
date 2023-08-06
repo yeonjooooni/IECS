@@ -58,13 +58,33 @@ def run_ga(terminal_id):
     real_distance_matrix = real_distance_matrix.values
 
     demand_df = pd.read_csv('./과제3 실시간 주문 대응 Routing 최적화 (orders_table) 수정완료.csv', encoding='cp949')
+
+    # 3일간의 하차 가능 시작과 끝 시간 리스트 계산
+    landing_start_times = []
+    landing_end_times = []
+    for idx, row in demand_df.iterrows():
+        start_time = row['하차가능시간_시작']
+        end_time = row['하차가능시간_종료']
+        day = int(row['date'][-1])-1
+        group = row['Group']
+        start_list, end_list = get_trip_time_lists(start_time, end_time, day, group, num_days=3)
+        landing_start_times.append(start_list)
+        landing_end_times.append(end_list)
+    demand_df['landing_start_times'] = landing_start_times
+    demand_df['landing_end_times'] = landing_end_times   
+
     veh_table = pd.read_csv('./과제3 실시간 주문 대응 Routing 최적화 (veh_table).csv', encoding='cp949')
     # veh_table에 'CurrentCenter', 'CenterArriveTime', 'IsUsed' 열 추가
     # cueerntcenter : 이 veh이 도착할 center, centerarrivetime : 이 veh이 center에 도착할 시간, isused : 이 veh이 사용한 적 있는지 여부
+    
     veh_table['CurrentCenter'] = veh_table['StartCenter']
     veh_table['CenterArriveTime'] = 0
     veh_table['IsUsed'] = 0
     
+    # for time_duration in range(0, 28 * 360, 360):
+    #     fleet_size_dict[time_duration] = [1]*vehicle_types
+    #     fleet_size_no_fixed_cost[time_duration] = [0]*vehicle_types
+
     ga_column_names = ['Route', 'Vehicle', 'Activity', 'Job_도착지점의 index', 'Arrive_Load', 'Leave_Load', 'Wait_Time', 'Arrive_Time','Leave_Time', 'Distance', 'Costs']
     total_ga_report = pd.DataFrame([], columns = ga_column_names)
     output_column_names = ['ORD_NO', 'VehicleID', 'Sequence', 'SiteCode', 'ArrivalTime', 'WaitingTime', 'ServiceTime', 'DepartureTime', 'Delivered']
@@ -88,7 +108,6 @@ def run_ga(terminal_id):
             # '착지_ID'열의 각 값의 인덱스를 담을 리스트 초기화
             index_positions = [list(pivot_table.index).index(terminal_id)]
             cbm_list = [0]
-            ORD_NO_list = []
 
             # tmp_df의 '착지_ID'열의 각 값에 대해 pivot_table.index 리스트의 인덱스를 찾습니다.
             for i in range(len(tmp_df)):
@@ -106,82 +125,77 @@ def run_ga(terminal_id):
             coordinates = coordinates.loc[id_list_only_in_tmp_df].sort_index(ascending=False).reset_index(drop=True)
 
             # 3일간의 하차 가능 시작과 끝 시간 리스트 계산
-            trip_start_times = [[0,0,0]]
-            trip_end_times = [[(4320 - max(0, day - 4) * 1440) for _ in range(3)]]
+            landing_start_times = [[0,0,0]]
+            landing_start_times.extend(tmp_df['landing_start_times'].tolist())
+            landing_end_times = [[(4320 - max(0, day - 4) * 1440) for _ in range(3)]]
+            landing_end_times.extend(tmp_df['landing_end_times'].tolist())
 
-            for idx, row in tmp_df.iterrows():
-                start_time = row['하차가능시간_시작']
-                end_time = row['하차가능시간_종료']
-                start_list, end_list = get_trip_time_lists(start_time, end_time, day, group, num_days=3)
-                trip_start_times.append(start_list)
-                trip_end_times.append(end_list)
+        parameters = pd.DataFrame({
+            'arrive_station': index_positions,
+            'TW_early':landing_start_times,
+            'TW_late':landing_end_times,
+            'TW_service_time':60,
+            'TW_wait_cost':0,
+            'cbm':cbm_list
+        })
 
-            parameters = pd.DataFrame({
-                'arrive_station': index_positions,
-                'TW_early':trip_start_times,
-                'TW_late':trip_end_times,
-                'TW_service_time':60,
-                'TW_wait_cost':0,
-                'cbm':cbm_list,
-            })
+        # Tranform to Numpy Array
+        coordinates = coordinates.values
+        parameters  = parameters.values
+        distance_matrix = pivot_table.values
 
-            # Tranform to Numpy Array
-            coordinates = coordinates.values
-            parameters  = parameters.values
-            distance_matrix = pivot_table.values
+        # Parameters - Model
+        n_depots    =  1           # The First n Rows of the 'distance_matrix' or 'coordinates' are Considered as Depots
+        time_window = 'with'       # 'with', 'without'
+        route       = 'closed'     # 'open', 'closed'
+        model       = 'vrp'        # 'tsp', 'mtsp', 'vrp'
+        graph       = True         # True, False
 
-            # Parameters - Model
-            n_depots    =  1           # The First n Rows of the 'distance_matrix' or 'coordinates' are Considered as Depots
-            time_window = 'with'       # 'with', 'without'
-            route       = 'closed'     # 'open', 'closed'
-            model       = 'vrp'        # 'tsp', 'mtsp', 'vrp'
-            graph       = True         # True, False
+        tmp_veh = veh_table[veh_table['CurrentCenter'] == terminal_id]
+        vehicle_index = tmp_veh.index.to_list()
+        vehicle_types = tmp_veh.shape[0] # 해당 출발지에 속한 차량 수
+        fixed_cost    = tmp_veh['FixedCost'].values.tolist()
+        variable_cost = tmp_veh['VariableCost'].values.tolist()
+        capacity      = tmp_veh['MaxCapaCBM'].values.tolist()
+        velocity      = [1] * vehicle_types # 전부 1
+        fleet_size    = [1] * vehicle_types # 전부 1
 
-            # Parameters - Vehicle
-            tmp_veh = veh_table[veh_table['CurrentCenter'] == terminal_id]
-            vehicle_index = tmp_veh.index.to_list()
-            vehicle_types = tmp_veh.shape[0] # 해당 출발지에 속한 차량 수
-            fixed_cost    = tmp_veh['FixedCost'].values.tolist()
-            variable_cost = tmp_veh['VariableCost'].values.tolist()
-            capacity      = tmp_veh['MaxCapaCBM'].values.tolist()
-            velocity      = [1] * vehicle_types # 전부 1
-            fleet_size    = [1] * vehicle_types # 전부 1
+        for time_duration in range(0, 28 * 360, 360):
+            fleet_size_dict[time_duration] = [1]*vehicle_types
+            fleet_size_no_fixed_cost[time_duration] = [0]*vehicle_types 
 
-            for time_duration in range(0, 28 * 360, 360):
-                fleet_size_dict[time_duration] = [1]*vehicle_types
-                fleet_size_no_fixed_cost[time_duration] = [0]*vehicle_types
+        # Parameters - GA
+        penalty_value   = 1000000    # GA Target Function Penalty Value for Violating the Problem Constraints
+        population_size = 10      # GA Population Size
+        mutation_rate   = 0.2     # GA Mutation Rate
+        elite           = 1        # GA Elite Member(s) - Total Number of Best Individual(s) that (is)are Maintained 
+        generations     = 2     # GA Number of Generations
 
-            # Parameters - GA
-            penalty_value   = 1000000    # GA Target Function Penalty Value for Violating the Problem Constraints
-            population_size = 10      # GA Population Size
-            mutation_rate   = 0.2     # GA Mutation Rate
-            elite           = 1        # GA Elite Member(s) - Total Number of Best Individual(s) that (is)are Maintained 
-            generations     = 2     # GA Number of Generations
+        # Run GA Function
+        ga_report, output_report, solution, fleet_used_now = genetic_algorithm_vrp(coordinates, distance_matrix, parameters, velocity, fixed_cost, variable_cost, capacity, real_distance_matrix, population_size, vehicle_types, n_depots, route, model, time_window, fleet_size, mutation_rate, elite, generations, penalty_value, graph, 'rw', fleet_size_no_fixed_cost[time_absolute])
+        total_ga_report = pd.concat([total_ga_report, ga_report])
+        total_output_report = pd.concat([total_output_report, output_report])        
 
-            # Run GA Function
-            ga_report, output_report, ga_vrp, fleet_used_now = genetic_algorithm_vrp(coordinates, distance_matrix, parameters, velocity, fixed_cost, variable_cost, capacity, real_distance_matrix, population_size, vehicle_types, n_depots, route, model, time_window, fleet_size, mutation_rate, elite, generations, penalty_value, graph, 'rw', fleet_size_no_fixed_cost[time_absolute], time_absolute)
-            total_ga_report = pd.concat([total_ga_report, ga_report])
-            total_output_report = pd.concat([total_output_report, output_report])
+        print("현재 절대 시각")
+        print(time_absolute)
+        print("####################################")
 
-            print("현재 절대 시각")
-            print(time_absolute)
-            print("####################################")
+        #ga_report.to_csv(f"./report/{date}_{group}.csv", index=False, encoding = 'cp949')
 
-            #ga_report.to_csv(f"./report/{date}_{group}.csv", index=False, encoding = 'cp949')
+        # 사용한 차량의 복귀 시간대 파악
+        clean_report = ga_report[ga_report['Route'].str.startswith('#')]
+        vehicles_within_intervals, fleet_used_now = vehicle_return_time(clean_report, fleet_used_now, vehicle_types, time_absolute)
 
-            # 사용한 차량의 복귀 시간대 파악
-            clean_report = ga_report[ga_report['Route'].str.startswith('#')]
-            vehicles_within_intervals, fleet_used_now = vehicle_return_time(clean_report, fleet_used_now, vehicle_types, time_absolute)
+        # 갔다 돌아와서 쓸 수 있는 차량 대수인 fleet size 없데이트
+        fleet_size_dict = usable_vehicle(fleet_size_dict, fleet_used_now, vehicle_types, vehicles_within_intervals, time_absolute)
 
-            # 갔다 돌아와서 쓸 수 있는 차량 대수인 fleet size 없데이트
-            fleet_size_dict = usable_vehicle(fleet_size_dict, fleet_used_now, vehicle_types, vehicles_within_intervals, time_absolute)
+        # 다시 쓸 수 있어 고정비용을 재계산하지 않아도 되는 vehicle 계산
+        fleet_size_no_fixed_cost = reusable_vehicle(clean_report, fleet_size_no_fixed_cost, vehicle_types, vehicles_within_intervals, time_absolute)
 
-            # 다시 쓸 수 있어 고정비용을 재계산하지 않아도 되는 vehicle 계산
-            fleet_size_no_fixed_cost = reusable_vehicle(clean_report, fleet_size_no_fixed_cost, vehicle_types, vehicles_within_intervals, time_absolute)
-            
-            # 차량의 현재 위치와 도착 시간 업데이트
-            update_veh_table(veh_table, vehicle_index, vehicles_within_intervals, vehicle_types, terminal_id, time_duration)
-            
+        update_veh_table(veh_table, vehicle_index, vehicles_within_intervals, vehicle_types, terminal_id, time_duration)
+        unassigned_idx = solution[3]
+        adjusted_unassigned_idx = [index - 1 for index in unassigned_idx]
+        unassigned_rows = tmp_df.iloc[adjusted_unassigned_idx]
     return total_ga_report, total_output_report
 
 # 일종의 main

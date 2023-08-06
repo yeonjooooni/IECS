@@ -58,12 +58,15 @@ def cap_break(vehicle_types, individual, parameters, capacity):
                 solution[0].append(individual_[0][i])
                 solution[1].append(sep_f)
                 solution[2].append(individual_[2][i])
+        
+        solution.append([k for k in individual_[3]])
         individual_ = copy.deepcopy(solution)
         if (individual == individual_):
             go_on      = False
         else:
             go_on      = True
             individual = copy.deepcopy(solution)
+    #print("cap_break", individual)
     return individual
 
 # Function: Route Evalution & Correction
@@ -129,6 +132,16 @@ def target_function(population, distance_matrix, parameters, velocity, fixed_cos
     cost_total = copy.deepcopy(cost)
     return cost_total, population
 
+def binary_search(array, target):
+    left, right = 0, len(array)
+    while left < right:
+        mid = (left + right) // 2
+        if array[mid] <= target:
+            left = mid + 1
+        else:
+            right = mid
+    return left
+
 # Function: Initial Population
 # CBM만 넘지 않게 일단일단 차량 배정
 def initial_population(parameters, coordinates='none', distance_matrix='none', population_size=5, vehicle_types=1, n_depots=1, model='vrp', capacity = [20,30,40,40,50], fleet_size = [0]*len(glb_fleet_used)):
@@ -138,41 +151,105 @@ def initial_population(parameters, coordinates='none', distance_matrix='none', p
     non_zero_demand_clients = [i for i in range(1, len(parameters[:,0]))] #[client for client in range(n_depots, distance_matrix.shape[0]) if coordinates[client][0] != 0]
     depots = [[i] for i in range(n_depots)]
     vehicles = [[i] for i in range(vehicle_types) if fleet_size[i]>0]
-    population = []
-    print(f"처리해야하는 물량: {len(non_zero_demand_clients)}")
+    
+    print(f"처리해야하는 물량 수: {len(non_zero_demand_clients)}")
+    print(f"처리해야하는 물량: {non_zero_demand_clients}")
     print(f"현재 차: {fleet_size}")
+
+    total_demand_unassigned = [] # 다음으로 넘길 주문
+
+    population = []
+    flag = True
     for i in range(population_size):
-        clients_temp = copy.deepcopy(non_zero_demand_clients)  # Use the filtered clients with non-zero demand
-        
-        #route는 출발지, route_depot: 도착지
-        routes = []
-        routes_depot = []
-        routes_vehicles = []
-        fleet_size_check = copy.deepcopy(fleet_size)
-        while len(clients_temp) > 0:
-            e = random.sample(vehicles, 1)[0]
-
-            while fleet_size_check[e[0]]<=0:
-                e = random.sample(vehicles,1)[0]
-            d = random.sample(depots, 1)[0]
-            c = random.sample(clients_temp, random.randint(1, min(len(clients_temp), 11))) #차량 최대적재량/최대주문크기 11
-            # 차량 적재량 넘으면 다시 돌리기
-            if sum([parameters[:, 5][int(i)] for i in c]) > capacity[int(e[0])]:
-                continue
-
-            tmp = []
-            # 차량 배정
-            # 주문 배정도 되도록 수정
-            for idx in c:                
-                tmp.append(int(parameters[:,0][int(idx)]))
+        if flag:
+            clients_temp = copy.deepcopy(non_zero_demand_clients)  # Use the filtered clients with non-zero demand
             
-            routes_vehicles.append(e)
-            routes_depot.append(d)
-            routes.append(tmp)
-            fleet_size_check[e[0]]-=1
-            clients_temp = [item for item in clients_temp if item not in c]
+            #route는 출발지, route_depot: 도착지
+            routes = []
+            routes_depot = []
+            routes_vehicles = []
+            fleet_size_check = copy.deepcopy(fleet_size)
+            
+            repeat_count = 0
+            while len(clients_temp) > 0:
+                repeat_count += 1
+                if repeat_count >= 10:
+                    if clients_temp:
+                        total_demand_unassigned.append(clients_temp.pop())
+                        repeat_count = 0
+                    continue
 
-        population.append([routes_depot, routes, routes_vehicles])
+                e = random.sample(vehicles, 1)[0]
+
+                if fleet_size_check != [0 for _ in range(len(fleet_size_check))]:
+                    while fleet_size_check[e[0]]<=0:
+                        e = random.sample(vehicles,1)[0]
+                else:
+                    total_demand_unassigned.extend(clients_temp)
+                    break
+
+                d = random.sample(depots, 1)[0]
+                c = random.sample(clients_temp, random.randint(1, min(len(clients_temp), 3))) #차량 최대적재량/최대주문크기
+                # 차량 적재량 넘으면 다시 돌리기
+                if sum([parameters[:, 5][int(i)] for i in c]) > capacity[int(e[0])]:
+                    continue
+
+                clients_temp = [item for item in clients_temp if item not in c]
+
+                tmp = []
+                # 차량 배정
+                # 주문 배정도 되도록 수정
+                for idx in c:                
+                    tmp.append(int(parameters[:,0][int(idx)]))
+                
+                routes_vehicles.append(e)
+                routes_depot.append(d)
+                routes.append(tmp)
+                fleet_size_check[e[0]]-=1
+
+            if total_demand_unassigned:
+                print(f"처리 못하고 다음으로 넘긴 물량: {total_demand_unassigned}")
+            
+            non_zero_demand_clients = [client for client in non_zero_demand_clients if client not in total_demand_unassigned]
+
+            population.append([routes_depot, routes, routes_vehicles, total_demand_unassigned])
+            flag = False
+        else:    
+            clients_temp = copy.deepcopy(non_zero_demand_clients)  # Use the filtered clients with non-zero demand
+            
+            #route는 출발지, route_depot: 도착지
+            routes = []
+            routes_depot = []
+            routes_vehicles = []
+            fleet_size_check = copy.deepcopy(fleet_size)
+            
+            repeat_count = 0
+            while len(clients_temp) > 0:
+
+                e = random.sample(vehicles, 1)[0]
+                while fleet_size_check[e[0]]<=0:
+                    e = random.sample(vehicles,1)[0]
+
+                d = random.sample(depots, 1)[0]
+                c = random.sample(clients_temp, random.randint(1, min(len(clients_temp), 3))) #차량 최대적재량/최대주문크기
+                # 차량 적재량 넘으면 다시 돌리기
+                if sum([parameters[:, 5][int(i)] for i in c]) > capacity[int(e[0])]:
+                    continue
+
+                clients_temp = [item for item in clients_temp if item not in c]
+
+                tmp = []
+                # 차량 배정
+                # 주문 배정도 되도록 수정
+                for idx in c:                
+                    tmp.append(int(parameters[:,0][int(idx)]))
+                
+                routes_vehicles.append(e)
+                routes_depot.append(d)
+                routes.append(tmp)
+                fleet_size_check[e[0]]-=1
+            population.append([routes_depot, routes, routes_vehicles, total_demand_unassigned])
+
     return population
 
 # Function: Fitness
@@ -203,6 +280,7 @@ def crossover_vrp_brbax(parent_1, parent_2):
     s         = random.sample(list(range(0,len(parent_1[0]))), 1)[0]
     subroute  = [ parent_1[0][s], parent_1[1][s], parent_1[2][s] ]
     offspring = copy.deepcopy(parent_2)
+    
     for k in range(len(parent_2[1])-1, -1, -1):
         offspring[1][k] = [item for item in offspring[1][k] if item not in subroute[1] ] 
         if (len(offspring[1][k]) == 0):
@@ -212,6 +290,7 @@ def crossover_vrp_brbax(parent_1, parent_2):
     offspring[0].append(subroute[0])
     offspring[1].append(subroute[1])
     offspring[2].append(subroute[2])
+    #print("offspring _ crossover_vrp_brbax", offspring)
     return offspring
 
 # Function: VRP Crossover - BCR (Best Cost Route Crossover)
@@ -255,6 +334,7 @@ def crossover_vrp_bcr(parent_1, parent_2, distance_matrix, velocity, capacity, f
             del offspring[0][i]
             del offspring[1][i]
             del offspring[2][i]
+    #print("offspring _ bcr", offspring)
     return offspring
 
 # breeding function이 제약조건을 만족하는지 check, 제약 조건은 initial population과 동일
@@ -282,7 +362,6 @@ def breeding(cost, population, fitness, distance_matrix, n_depots, elite, veloci
             parent_1 = copy.deepcopy(population[parent_1])  
             parent_2 = copy.deepcopy(population[parent_2])
             rand = int.from_bytes(os.urandom(8), byteorder = 'big') / ((1 << 64) - 1)  
-
             if((len(parent_1[1]) > 1 and len(parent_2[1]) > 1)):
                 if (rand > 0.5):
                     offspring[i] = crossover_vrp_brbax(parent_1, parent_2)
@@ -294,7 +373,7 @@ def breeding(cost, population, fitness, distance_matrix, n_depots, elite, veloci
             if (n_depots > 1):
                 offspring[i] = evaluate_depot(n_depots, offspring[i], distance_matrix) 
             if (vehicle_types > 1):
-                offspring[i] = evaluate_vehicle(vehicle_types, offspring[i], distance_matrix, parameters, velocity, fixed_cost, variable_cost, capacity, penalty_value, time_window, route,real_distance_matrix, fleet_size, fleet_used)
+                offspring[i] = evaluate_vehicle(vehicle_types, offspring[i], distance_matrix, parameters, velocity, fixed_cost, variable_cost, capacity, penalty_value, time_window, route,real_distance_matrix, fleet_size, fleet_used=fleet_used)
         
             offspring[i] = cap_break(vehicle_types, offspring[i], parameters, capacity)
     
@@ -395,6 +474,7 @@ def genetic_algorithm_vrp(coordinates, distance_matrix, parameters, velocity, fi
     cost             = copy.deepcopy(cost)
     elite_cst        = copy.deepcopy(cost[0][0])
     solution         = copy.deepcopy(population[0])
+
     #print('Generation = ', count, ' Distance = ', elite_ind, ' f(x) = ', round(elite_cst, 2)) 
     while (count <= generations-1):
         offspring        = breeding(cost, population, fitness, distance_matrix, n_depots, elite, velocity, max_capacity, fixed_cost, variable_cost, penalty_value, time_window, parameters, route, vehicle_types, fleet_size,real_distance_matrix, fleet_used=fleet_used)          

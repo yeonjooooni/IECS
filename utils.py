@@ -169,3 +169,4 @@ def update_veh_table(veh_table, vehicle_index, vehicles_within_intervals, vehicl
                 veh_table.loc[vehicle_index[idx], 'CurrentCenter'] = terminal_id
                 veh_table.loc[vehicle_index[idx], 'CenterArriveTime'] = time_duration
                 veh_table.loc[vehicle_index[idx], 'IsUsed'] = 1
+            # print(veh_table.loc[vehicle_index[idx]]["VehNum"])
