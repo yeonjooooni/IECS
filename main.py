@@ -4,7 +4,7 @@ import numpy as np
 import copy
 import os
 import time as tm
-import numpy as np
+from collections import defaultdict
 from itertools import cycle
 from matplotlib import pyplot as plt
 import copy
@@ -49,8 +49,9 @@ def get_trip_time_lists(start_time, end_time, day, group, num_days=3): #수정�
     return start_list, end_list
 
 def run_ga(terminal_id):
-    fleet_size_dict = {}
-    fleet_size_no_fixed_cost = {}
+    # dict 대신 defaultdict를 사용하면, key가 없을 때 자동으로 0을 할당해줌
+    fleet_size_dict = defaultdict(lambda : 0)
+    fleet_size_no_fixed_cost = defaultdict(lambda : 0)
     od_df = pd.read_csv('./과제3 실시간 주문 대응 Routing 최적화 (od_matrix) 수정완료.csv')
     # pivot_table = pd.read_csv("./pivot_table_filled.csv", encoding='cp949', index_col=[0])
     real_distance_matrix = pd.read_csv("./distance_matrix.csv", index_col=0)
@@ -58,13 +59,12 @@ def run_ga(terminal_id):
 
     demand_df = pd.read_csv('./과제3 실시간 주문 대응 Routing 최적화 (orders_table) 수정완료.csv', encoding='cp949')
     veh_table = pd.read_csv('./과제3 실시간 주문 대응 Routing 최적화 (veh_table).csv', encoding='cp949')
-    tmp_veh = veh_table[veh_table['StartCenter'] == terminal_id]
-    vehicle_types = tmp_veh.shape[0]
-
-    for time_duration in range(0, 28 * 360, 360):
-        fleet_size_dict[time_duration] = [1]*vehicle_types
-        fleet_size_no_fixed_cost[time_duration] = [0]*vehicle_types
-
+    # veh_table에 'CurrentCenter', 'CenterArriveTime', 'IsUsed' 열 추가
+    # cueerntcenter : 이 veh이 도착할 center, centerarrivetime : 이 veh이 center에 도착할 시간, isused : 이 veh이 사용한 적 있는지 여부
+    veh_table['CurrentCenter'] = veh_table['StartCenter']
+    veh_table['CenterArriveTime'] = 0
+    veh_table['IsUsed'] = 0
+    
     ga_column_names = ['Route', 'Vehicle', 'Activity', 'Job_도착지점의 index', 'Arrive_Load', 'Leave_Load', 'Wait_Time', 'Arrive_Time','Leave_Time', 'Distance', 'Costs']
     total_ga_report = pd.DataFrame([], columns = ga_column_names)
     output_column_names = ['ORD_NO', 'VehicleID', 'Sequence', 'SiteCode', 'ArrivalTime', 'WaitingTime', 'ServiceTime', 'DepartureTime', 'Delivered']
@@ -78,8 +78,7 @@ def run_ga(terminal_id):
             tmp_df = demand_df[demand_df['date']==f'2023-05-0{1+day}']
             tmp_df = tmp_df[tmp_df['Group'].isin([group])]
             tmp_df = tmp_df[tmp_df['터미널ID']==terminal_id]
-            tmp_veh = veh_table[veh_table['StartCenter'] == terminal_id]
-
+            
             id_list_only_in_tmp_df = list(set(tmp_df['터미널ID'].values.tolist() + tmp_df['착지ID'].values.tolist()))
             pivot_table = pd.read_csv("./pivot_table_filled.csv", encoding='cp949', index_col=[0])
             pivot_table = pivot_table.loc[id_list_only_in_tmp_df,id_list_only_in_tmp_df]
@@ -139,12 +138,18 @@ def run_ga(terminal_id):
             graph       = True         # True, False
 
             # Parameters - Vehicle
-            vehicle_types = tmp_veh.shape[0] # 해당 출발지에 속한 차량 수 전부
+            tmp_veh = veh_table[veh_table['CurrentCenter'] == terminal_id]
+            vehicle_index = tmp_veh.index.to_list()
+            vehicle_types = tmp_veh.shape[0] # 해당 출발지에 속한 차량 수
             fixed_cost    = tmp_veh['FixedCost'].values.tolist()
             variable_cost = tmp_veh['VariableCost'].values.tolist()
             capacity      = tmp_veh['MaxCapaCBM'].values.tolist()
             velocity      = [1] * vehicle_types # 전부 1
-            fleet_size    =  fleet_size_dict[time_absolute] # 전부 1
+            fleet_size    = [1] * vehicle_types # 전부 1
+
+            for time_duration in range(0, 28 * 360, 360):
+                fleet_size_dict[time_duration] = [1]*vehicle_types
+                fleet_size_no_fixed_cost[time_duration] = [0]*vehicle_types
 
             # Parameters - GA
             penalty_value   = 1000000    # GA Target Function Penalty Value for Violating the Problem Constraints
@@ -173,6 +178,10 @@ def run_ga(terminal_id):
 
             # 다시 쓸 수 있어 고정비용을 재계산하지 않아도 되는 vehicle 계산
             fleet_size_no_fixed_cost = reusable_vehicle(clean_report, fleet_size_no_fixed_cost, vehicle_types, vehicles_within_intervals, time_absolute)
+            
+            # 차량의 현재 위치와 도착 시간 업데이트
+            update_veh_table(veh_table, vehicle_index, vehicles_within_intervals, vehicle_types, terminal_id, time_duration)
+            
     return total_ga_report, total_output_report
 
 # 일종의 main

@@ -11,180 +11,11 @@ import time as tm
 from itertools import cycle
 from matplotlib import pyplot as plt
 from utils import *
+from report import *
+from eval import *
 plt.style.use('bmh')
 glb_fleet_used = []
 ############################################################################
-# Function: Tour Plot
-def plot_tour_coordinates (coordinates, solution, n_depots, route, size_x = 10, size_y = 10):
-    depot     = solution[0]
-    city_tour = solution[1]  # [[3,2,6,2],[15,2,7,6]]
-    cycol     = cycle(['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf', '#bf77f6', '#ff9408', 
-                       '#d1ffbd', '#c85a53', '#3a18b1', '#ff796c', '#04d8b2', '#ffb07c', '#aaa662', '#0485d1', '#fffe7a', '#b0dd16', '#d85679', '#12e193', 
-                       '#82cafc', '#ac9362', '#f8481c', '#c292a1', '#c0fa8b', '#ca7b80', '#f4d054', '#fbdd7e', '#ffff7e', '#cd7584', '#f9bc08', '#c7c10c'])
-    plt.figure(figsize = [size_x, size_y])
-    for j in range(0, len(city_tour)):
-        if (route == 'closed'):
-            xy = np.zeros((len(city_tour[j]) + 2, 2))
-        else:
-            xy = np.zeros((len(city_tour[j]) + 1, 2))
-        for i in range(0, xy.shape[0]):
-            if (i == 0):
-                xy[ i, 0] = coordinates[depot[j][i], 0]
-                xy[ i, 1] = coordinates[depot[j][i], 1]
-                if (route == 'closed'):
-                    xy[-1, 0] = coordinates[depot[j][i], 0]
-                    xy[-1, 1] = coordinates[depot[j][i], 1]
-            if (i > 0 and i < len(city_tour[j])+1):
-                xy[i, 0] = coordinates[city_tour[j][i-1], 0]
-                xy[i, 1] = coordinates[city_tour[j][i-1], 1]
-        plt.plot(xy[:,0], xy[:,1], marker = 's', alpha = 0.5, markersize = 5, color = next(cycol))
-    for i in range(0, coordinates.shape[0]):
-        if (i < n_depots):
-            plt.plot(coordinates[i,0], coordinates[i,1], marker = 's', alpha = 1.0, markersize = 7, color = 'k')[0]
-            plt.text(coordinates[i,0], coordinates[i,1], i, ha = 'center', va = 'bottom', color = 'k', fontsize = 7)
-        else:
-            plt.text(coordinates[i,0],  coordinates[i,1], i, ha = 'center', va = 'bottom', color = 'k', fontsize = 7)
-    plt.savefig('line_visualization.png')
-    return
-
-# Function: Tour Plot - Lat Long
-def plot_tour_latlong (lat_long, solution, n_depots, route):
-    m       = folium.Map(location = (lat_long.iloc[0][0], lat_long.iloc[0][1]), zoom_start = 14)
-    clients = folium.plugins.MarkerCluster(name = 'Clients').add_to(m)
-    depots  = folium.plugins.MarkerCluster(name = 'Depots').add_to(m)
-    for i in range(0, lat_long.shape[0]):
-        if (i < n_depots):
-            folium.Marker(location = [lat_long.iloc[i][0], lat_long.iloc[i][1]], popup = '<b>Client: </b>%s</br> <b>Adress: </b>%s</br>'%(int(i), 'D'), icon = folium.Icon(color = 'black', icon = 'home')).add_to(depots)
-        else:
-            folium.Marker(location = [lat_long.iloc[i][0], lat_long.iloc[i][1]], popup = '<b>Client: </b>%s</br> <b>Adress: </b>%s</br>'%(int(i), 'C'), icon = folium.Icon(color = 'blue')).add_to(clients)
-    depot     = solution[0]
-    city_tour = solution[1]
-    cycol     = cycle(['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf', '#bf77f6', '#ff9408', 
-                       '#d1ffbd', '#c85a53', '#3a18b1', '#ff796c', '#04d8b2', '#ffb07c', '#aaa662', '#0485d1', '#fffe7a', '#b0dd16', '#d85679', '#12e193', 
-                       '#82cafc', '#ac9362', '#f8481c', '#c292a1', '#c0fa8b', '#ca7b80', '#f4d054', '#fbdd7e', '#ffff7e', '#cd7584', '#f9bc08', '#c7c10c'])
-    for j in range(0, len(city_tour)):
-        if (route == 'closed'):
-            ltlng = np.zeros((len(city_tour[j]) + 2, 2))
-        else:
-            ltlng = np.zeros((len(city_tour[j]) + 1, 2))
-        for i in range(0, ltlng.shape[0]):
-            if (i == 0):
-                ltlng[ i, 0] = lat_long.iloc[depot[j][i], 0]
-                ltlng[ i, 1] = lat_long.iloc[depot[j][i], 1]
-                if (route == 'closed'):
-                    ltlng[-1, 0] = lat_long.iloc[depot[j][i], 0]
-                    ltlng[-1, 1] = lat_long.iloc[depot[j][i], 1]
-            if (i > 0 and i < len(city_tour[j])+1):
-                ltlng[i, 0] = lat_long.iloc[city_tour[j][i-1], 0]
-                ltlng[i, 1] = lat_long.iloc[city_tour[j][i-1], 1]
-        c = next(cycol)
-        for i in range(0, ltlng.shape[0]-1):
-          locations = [ (ltlng[i,0], ltlng[i,1]), (ltlng[i+1,0], ltlng[i+1,1])]
-          folium.PolyLine(locations , color = c, weight = 1.5, opacity = 1).add_to(m)
-    return m
-
-# Function: Subroute Distance
-def evaluate_distance(distance_matrix, depot, subroute):    
-    subroute_i    = depot + subroute
-    subroute_j    = subroute + depot
-    subroute_ij   = [(subroute_i[i], subroute_j[i]) for i in range(0, len(subroute_i))]
-    distance      = list(np.cumsum(distance_matrix[tuple(np.array(subroute_ij).T)]))
-    distance[0:0] = [0.0]
-    return distance
-
-# Function: Subroute Time
-def evaluate_time(distance_matrix, parameters, depot, subroute, velocity):  
-    tw_early   = parameters[:, 1]
-    tw_late    = parameters[:, 2]
-    tw_st      = parameters[:, 3]
-    subroute_i = depot + subroute
-    subroute_j = subroute + depot
-    wait       = [0]*len(subroute_j)
-    time       = [0]*len(subroute_j)
-    for i in range(0, len(time)):
-        time[i] = time[i] + distance_matrix[(subroute_i[i], subroute_j[i])]/velocity[0]
-
-        if (time[i] < tw_early[subroute_j][i][0]):
-            wait[i] = tw_early[subroute_j][i][0] - time[i]
-            time[i] = tw_early[subroute_j][i][0]
-            day_num = 0
-        elif (time[i] < tw_late[subroute_j][i][0]):
-            wait[i] = 0
-            day_num = 0          
-        elif (time[i] < tw_early[subroute_j][i][1]):
-            wait[i] = tw_early[subroute_j][i][1] - time[i]
-            time[i] = tw_early[subroute_j][i][1]  
-            day_num = 1
-        elif (time[i] < tw_late[subroute_j][i][1]):
-            wait[i] = 0
-            day_num = 1
-        elif (time[i] < tw_early[subroute_j][i][2]):
-            wait[i] = tw_early[subroute_j][i][2] - time[i]
-            time[i] = tw_early[subroute_j][i][2]  
-            day_num = 2
-        elif (time[i] < tw_late[subroute_j][i][2]):
-            wait[i] = 0
-            day_num = 2
-        else:
-            day_num = 2  
-        time[i] = time[i] + tw_st[subroute_j][i]
-                
-        if (i + 1 <= len(time) - 1):
-            time[i+1] = time[i]
-
-    time[0:0] = [0]
-    wait[0:0] = [0]
-    return wait, time, day_num
-
-# Function: Subroute Capacity
-def evaluate_capacity(parameters, depot, subroute): 
-    demand    = parameters[:, 5]
-    subroute_ = depot + subroute + depot
-    capacity  = list(np.cumsum(demand[subroute_]))
-    return capacity 
-
-# Function: Subroute Cost
-def evaluate_cost(dist, wait, parameters, depot, subroute, fixed_cost, variable_cost, time_window):
-    tw_wc     = parameters[:, 4]
-    subroute_ = depot + subroute + depot
-    cost      = [0]*len(subroute_)
-    if (time_window == 'with'):
-        cost = [fixed_cost[0] + y*z if x == 0 else fixed_cost[0] + x*variable_cost[0] + y*z for x, y, z in zip(dist, wait, tw_wc[subroute_])]
-    else:
-        cost = [fixed_cost[0]  if x == 0 else fixed_cost[0] + x*variable_cost[0]  for x in dist]
-    return cost
-
-# Function: Subroute Cost
-def evaluate_cost_penalty(dist, time, wait, cap, capacity, parameters, depot, subroute, fixed_cost, variable_cost, penalty_value, time_window, route, day_num):
-    tw_late = parameters[:, 2]
-    tw_st   = parameters[:, 3]
-    tw_wc   = parameters[:, 4]
-    if (route == 'open'):
-        subroute_ = depot + subroute
-    else:
-        subroute_ = depot + subroute + depot
-    pnlt = 0
-    cost = [0]*len(subroute_)
-    pnlt = pnlt + sum( x > capacity for x in cap[0:len(subroute_)] )
-    if(time_window == 'with'):
-        pnlt = pnlt + sum(x > y + z for x, y, z in zip(time, tw_late[subroute_][day_num] , tw_st[subroute_]))  
-        cost = [fixed_cost[0] + y*z if x == 0 else cost[0] + x*variable_cost[0] + y*z for x, y, z in zip(dist, wait, tw_wc[subroute_])]
-    else:
-        cost = [fixed_cost[0] if x == 0 else cost[0] + x*variable_cost[0] for x in dist]        
-    cost[-1] = cost[-1] + pnlt*penalty_value
-    return cost[-1]
-
-# Function: Routes Nearest Depot
-def evaluate_depot(n_depots, individual, real_distance_matrix):
-    d_1 = float('+inf')
-    for i in range(0, n_depots):
-        for j in range(0, len(individual[1])):
-            d_2 = evaluate_distance(real_distance_matrix, [i], individual[1][j])[-1]
-            if (d_2 < d_1):
-                d_1 = d_2
-                individual[0][j] = [i]
-    return individual
-
 # Function: Routes Best Vehicle
 def evaluate_vehicle(vehicle_types, individual, distance_matrix, parameters, velocity, fixed_cost, variable_cost, capacity, penalty_value, time_window, route,real_distance_matrix, fleet_size, fleet_used = glb_fleet_used):
     cost, _     = target_function([individual], distance_matrix, parameters, velocity, fixed_cost, variable_cost, capacity, penalty_value, time_window, route,real_distance_matrix, fleet_size, fleet_used) 
@@ -234,120 +65,6 @@ def cap_break(vehicle_types, individual, parameters, capacity):
             go_on      = True
             individual = copy.deepcopy(solution)
     return individual
-
-# Function: Solution Report
-def show_report(solution, distance_matrix,  parameters, velocity, fixed_cost, variable_cost, route, time_window, real_distance_matrix, fleet_used, time_absolute):
-    column_names = ['Route', 'Vehicle', 'Activity', 'Job_도착지점의 index', 'Arrive_Load', 'Leave_Load', 'Wait_Time', 'Arrive_Time','Leave_Time', 'Distance', 'Costs']
-    tt           = 0
-    td           = 0 
-    tc           = 0
-    tw_st        = parameters[:, 3]
-    report_lst   = []
-    no_fixed_cost_count = [0]*len(fleet_used)
-    
-    for i in range(0, len(solution[1])):
-        dist         = evaluate_distance(real_distance_matrix, solution[0][i], solution[1][i])
-        wait, time   = evaluate_time(distance_matrix, parameters, solution[0][i], solution[1][i], velocity = [velocity[solution[2][i][0]]])[0:2]
-        reversed_sol = copy.deepcopy(solution[1][i])
-        reversed_sol.reverse()
-        cap          = evaluate_capacity(parameters, solution[0][i], reversed_sol) 
-        cap.reverse()
-        leave_cap = copy.deepcopy(cap)
-        for n in range(1, len(leave_cap)-1):
-            leave_cap[n] = cap[n+1] 
-
-        flag = True
-        if fleet_used[solution[2][i][0]] > no_fixed_cost_count[solution[2][i][0]]:
-            flag = False
-            no_fixed_cost_count[solution[2][i][0]] += 1
-
-        if flag:
-            cost = evaluate_cost(dist, wait, parameters, solution[0][i], solution[1][i], fixed_cost = [fixed_cost[solution[2][i][0]]], variable_cost = [variable_cost[solution[2][i][0]]], time_window = time_window)
-        else:
-            cost = evaluate_cost(dist, wait, parameters, solution[0][i], solution[1][i], fixed_cost = [0],                               variable_cost = [variable_cost[solution[2][i][0]]], time_window = time_window)
-
-        if (route == 'closed'):
-            subroute = [solution[0][i] + solution[1][i] + solution[0][i] ]
-        elif (route == 'open'):
-            subroute = [solution[0][i] + solution[1][i] ]
-        for j in range(0, len(subroute[0])):
-            if (j == 0):
-                activity    = 'start'
-                arrive_time = round(time[j],2)
-            else:
-                arrive_time = round(time[j] - tw_st[subroute[0][j]] - wait[j],2)
-            if (j > 0 and j < len(subroute[0]) - 1):
-                activity = 'service'  
-            if (j == len(subroute[0]) - 1):
-                activity = 'finish'
-                if (time[j] > tt):
-                    tt = time[j]
-                td = td + dist[j]
-                tc = tc + cost[j]
-            report_lst.append(['#' + str(i+1), solution[2][i][0], activity, subroute[0][j], cap[j], leave_cap[j], round(wait[j],2), arrive_time, round(time[j],2), round(dist[j],2), round(cost[j],2) ])
-        report_lst.append(['-//-', '-//-', '-//-', '-//-','-//-', '-//-', '-//-', '-//-', '-//-', '-//-', '-//-'])
-    report_lst.append(['MAX TIME', '', '','', '', '', '', '', round(tt,2), '', ''])
-    report_lst.append(['TOTAL', '', '','', '', '', '', '', '', round(td,2), round(tc,2)])
-    report_df = pd.DataFrame(report_lst, columns = column_names)
-    return report_df
-
-def output_report(solution, distance_matrix, parameters, velocity, fixed_cost, variable_cost, route, time_window, time_absolute):
-    column_names = ['ORD_NO', 'VehicleID', 'Sequence', 'SiteCode', 'ArrivalTime', 'WaitingTime', 'ServiceTime', 'DepartureTime', 'Delivered']
-    tt = 0
-    td = 0 
-    tc = 0
-    tw_st = parameters[:, 3]
-    report_lst = []
-    
-    # Create the Delivered table at specified times
-    delivered_table = pd.DataFrame()
-    
-    for i in range(0, len(solution[1])):
-        dist = evaluate_distance(distance_matrix, solution[0][i], solution[1][i])
-        wait, time = evaluate_time(distance_matrix, parameters, solution[0][i], solution[1][i], velocity = [velocity[solution[2][i][0]]])[0:2]
-        reversed_sol = copy.deepcopy(solution[1][i])
-        reversed_sol.reverse()
-        cap = evaluate_capacity(parameters, solution[0][i], reversed_sol) 
-        cap.reverse()
-        leave_cap = copy.deepcopy(cap)
-        for n in range(1, len(leave_cap)-1):
-            leave_cap[n] = cap[n+1] 
-        cost = evaluate_cost(dist, wait, parameters, solution[0][i], solution[1][i], fixed_cost = [fixed_cost[solution[2][i][0]]], variable_cost = [variable_cost[solution[2][i][0]]], time_window = time_window)
-        if (route == 'closed'):
-            subroute = [solution[0][i] + solution[1][i] + solution[0][i]]
-        else: #elif (route == 'open'):
-            subroute = [solution[0][i] + solution[1][i]]
-        
-        for j in range(0, len(subroute[0])):
-            if (j == 0):
-                activity = 'start'
-                arrive_time = round(time[j], 2)
-                delivered_status = 'Null'
-            else:
-                arrive_time = round(time[j] - tw_st[subroute[0][j]] - wait[j], 2)
-            if (j > 0 and j < len(subroute[0]) - 1):
-                activity = 'service'  
-                delivered_status = 'Yes'
-            if (j == len(subroute[0]) - 1):
-                activity = 'finish'
-                delivered_status = "temp"
-                if (time[j] > tt):
-                    tt = time[j]
-                td = td + dist[j]
-                tc = tc + cost[j]
-                continue
-            
-            # # Prepare data for the Delivered column
-            # # 우리는 아직 service가 마무리 안된 건수가 없음. 그리고 finish는 출력할 필요 없음
-            #activity = finish, 우리가 보려고 표시한 return한 차량
-            report_lst.append([solution[2][i][0], 'VEH_' + str(solution[2][i][0]), j+1, subroute[0][j], 
-                               min_to_day(arrive_time+time_absolute), round(wait[j], 2)+time_absolute, round(time[j], 2)+time_absolute if activity != 'start' else 'Null', min_to_day(round(time[j], 2)+time_absolute) if activity == 'service' else 'Null', delivered_status])
-        
-        report_lst.append(['-//-', '-//-', '-//-', '-//-', '-//-', '-//-', '-//-', '-//-', '-//-'])
-    
-    report_df = pd.DataFrame(report_lst, columns=column_names)
-    
-    return report_df
 
 # Function: Route Evalution & Correction
 # 각 population의 cost만 계산
@@ -456,7 +173,6 @@ def initial_population(parameters, coordinates='none', distance_matrix='none', p
             clients_temp = [item for item in clients_temp if item not in c]
 
         population.append([routes_depot, routes, routes_vehicles])
-
     return population
 
 # Function: Fitness
@@ -705,9 +421,6 @@ def genetic_algorithm_vrp(coordinates, distance_matrix, parameters, velocity, fi
     for sublist in solution[2]:
         value = sublist[0]
         fleet_used_now[value] += 1
-    # final_solution = []
-    # for route_list in solution[1]:
-    #     if route_list[1]< :
 
     solution_report = show_report(solution, distance_matrix, parameters, velocity, fixed_cost, variable_cost, route, time_window, real_distance_matrix, fleet_used, time_absolute)
     output = output_report(solution, distance_matrix, parameters, velocity, fixed_cost, variable_cost, route, time_window, time_absolute)
