@@ -149,7 +149,7 @@ def run_ga(terminal_id):
         time_window = 'with'       # 'with', 'without'
         route       = 'closed'     # 'open', 'closed'
         model       = 'vrp'        # 'tsp', 'mtsp', 'vrp'
-        graph       = True         # True, False
+        graph       = False         # True, False
 
         tmp_veh = veh_table[veh_table['CurrentCenter'] == terminal_id]
         vehicle_index = tmp_veh.index.to_list()
@@ -202,5 +202,5 @@ def run_ga(terminal_id):
 # terminal 지정해줘야 됨
 terminal_id = 'O_179'
 ga_report, output_report = run_ga(terminal_id)
-ga_report.to_csv('VRP-04-Report.csv', encoding= 'cp949', index = False)
-output_report.to_csv('output-01-Report.csv', encoding= 'cp949', index = False)
+ga_report.to_csv('./test/VRP-04-Report.csv', encoding= 'cp949', index = False)
+output_report.to_csv('./test/output-01-Report.csv', encoding= 'cp949', index = False)
