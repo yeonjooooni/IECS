@@ -11,11 +11,6 @@ import copy
 from pyVRP import *
 from utils import *
 
-# 시간을 분 단위로 변환하는 함수
-def time_to_minutes(time_str):
-    hour, minute = map(int, time_str.split(':'))
-    return hour * 60 + minute
-
 # 3일간의 하차 가능 시작과 끝 시간 리스트를 구하는 함수
 # 여기서 이미 time_window와 무관하게 3일차(4320분)에 딱 cut하도록 만들어 놓음
 def get_trip_time_lists(start_time, end_time, day, group, num_days=3): #수정필요
@@ -74,16 +69,13 @@ def run_ga(terminal_id):
     demand_df['landing_end_times'] = landing_end_times   
 
     veh_table = pd.read_csv('./과제3 실시간 주문 대응 Routing 최적화 (veh_table).csv', encoding='cp949')
+    
     # veh_table에 'CurrentCenter', 'CenterArriveTime', 'IsUsed' 열 추가
     # cueerntcenter : 이 veh이 도착할 center, centerarrivetime : 이 veh이 center에 도착할 시간, isused : 이 veh이 사용한 적 있는지 여부
     
     veh_table['CurrentCenter'] = veh_table['StartCenter']
     veh_table['CenterArriveTime'] = 0
     veh_table['IsUsed'] = 0
-    
-    # for time_duration in range(0, 28 * 360, 360):
-    #     fleet_size_dict[time_duration] = [1]*vehicle_types
-    #     fleet_size_no_fixed_cost[time_duration] = [0]*vehicle_types
 
     ga_column_names = ['Route', 'Vehicle', 'Activity', 'Job_도착지점의 index', 'Arrive_Load', 'Leave_Load', 'Wait_Time', 'Arrive_Time','Leave_Time', 'Distance', 'Costs']
     total_ga_report = pd.DataFrame([], columns = ga_column_names)
@@ -108,11 +100,13 @@ def run_ga(terminal_id):
             # '착지_ID'열의 각 값의 인덱스를 담을 리스트 초기화
             index_positions = [list(pivot_table.index).index(terminal_id)]
             cbm_list = [0]
+            ordID_list = [0]
 
             # tmp_df의 '착지_ID'열의 각 값에 대해 pivot_table.index 리스트의 인덱스를 찾습니다.
             for i in range(len(tmp_df)):
                 value = tmp_df['착지ID'].values.tolist()[i]
                 index_positions.append(list(pivot_table.index).index(value))
+                ordID_list.append(tmp_df['주문ID'].values[i])
                 cbm_list.append(float(tmp_df['CBM'].values[i]))
 
             departure_coordinates = demand_df.drop_duplicates(['착지ID'])[['착지ID', '하차지_위도', '하차지_경도']]
@@ -136,7 +130,8 @@ def run_ga(terminal_id):
             'TW_late':landing_end_times,
             'TW_service_time':60,
             'TW_wait_cost':0,
-            'cbm':cbm_list
+            'cbm':cbm_list,
+            'ordID': ordID_list
         })
 
         # Tranform to Numpy Array
@@ -153,7 +148,8 @@ def run_ga(terminal_id):
 
         tmp_veh = veh_table[veh_table['CurrentCenter'] == terminal_id]
         vehicle_index = tmp_veh.index.to_list()
-        vehicle_types = tmp_veh.shape[0] # 해당 출발지에 속한 차량 수
+        vehicle_types = tmp_veh.shape[0]
+        vehicleID_list = tmp_veh['VehNum'].values.tolist() # 해당 출발지에 속한 차량 수
         fixed_cost    = tmp_veh['FixedCost'].values.tolist()
         variable_cost = tmp_veh['VariableCost'].values.tolist()
         capacity      = tmp_veh['MaxCapaCBM'].values.tolist()
@@ -172,9 +168,9 @@ def run_ga(terminal_id):
         generations     = 2     # GA Number of Generations
 
         # Run GA Function
-        ga_report, output_report, solution, fleet_used_now = genetic_algorithm_vrp(coordinates, distance_matrix, parameters, velocity, fixed_cost, variable_cost, capacity, real_distance_matrix, population_size, vehicle_types, n_depots, route, model, time_window, fleet_size, mutation_rate, elite, generations, penalty_value, graph, 'rw', fleet_size_no_fixed_cost[time_absolute])
+        ga_report, output_report, solution, fleet_used_now = genetic_algorithm_vrp(coordinates, distance_matrix, parameters, velocity, fixed_cost, variable_cost, capacity, real_distance_matrix, population_size,vehicle_types, n_depots, route, model, time_window, fleet_size, mutation_rate, elite, generations, penalty_value, graph, 'rw', fleet_size_no_fixed_cost[time_absolute])
         total_ga_report = pd.concat([total_ga_report, ga_report])
-        total_output_report = pd.concat([total_output_report, output_report])        
+        total_output_report = pd.concat([total_output_report, output_report])      
 
         print("현재 절대 시각")
         print(time_absolute)
