@@ -1,17 +1,23 @@
 import numpy as np
 import copy
 # Function: Subroute Distance
-def evaluate_distance(distance_matrix, depot, subroute):    
+def evaluate_distance(distance_matrix, depot, subroute, parameters):    
+    subroute      = evaluate_subroute(subroute, parameters)
     subroute_i    = depot + subroute
     subroute_j    = subroute + depot
     subroute_ij   = [(subroute_i[i], subroute_j[i]) for i in range(0, len(subroute_i))]
     distance      = list(np.cumsum(distance_matrix[tuple(np.array(subroute_ij).T)]))
     distance[0:0] = [0.0]
     return distance
-
+def evaluate_subroute(index_lst,parameters):
+    subroute = []
+    for i in index_lst:
+        subroute.append(parameters[:,0][i])
+    return subroute
 # Function: Subroute Time
 # 각 subroute node마다 waite, arrival, departure 시간 찍어주는 함수
-def evaluate_time(distance_matrix, parameters, depot, subroute, velocity):  
+def evaluate_time(distance_matrix, parameters, depot, subroute, velocity):
+    subroute   = evaluate_subroute(subroute, parameters)
     tw_early   = parameters[:, 1]
     tw_late    = parameters[:, 2]
     tw_st      = parameters[:, 3]
@@ -63,6 +69,7 @@ def evaluate_capacity(parameters, depot, subroute):
 # Function: Subroute Cost
 def evaluate_cost(dist, wait, parameters, depot, subroute, fixed_cost, variable_cost, time_window):
     tw_wc     = parameters[:, 4]
+    subroute  = evaluate_subroute(subroute, parameters)
     subroute_ = depot + subroute + depot
     cost      = [0]*len(subroute_)
     if (time_window == 'with'):
@@ -76,6 +83,7 @@ def evaluate_cost_penalty(dist, time, wait, cap, capacity, parameters, depot, su
     tw_late = parameters[:, 2]
     tw_st   = parameters[:, 3]
     tw_wc   = parameters[:, 4]
+    subroute= evaluate_subroute(subroute, parameters)
     if (route == 'open'):
         subroute_ = depot + subroute
     else:
