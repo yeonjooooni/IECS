@@ -233,11 +233,14 @@ def initial_population(parameters, coordinates='none', distance_matrix='none', p
             flag_first_is_best = False
             while len(clients_temp) > 0:
                 repeat_count += 1
-                if repeat_count >= 100:
-                    if clients_temp:
-                        total_demand_unassigned.append(clients_temp.pop())
-                        repeat_count = 0
-                    continue
+                if repeat_count >= 10000:
+                    repeat_count = 0
+                    flag_first_is_best = True
+                    break
+
+                if not vehicles:
+                    flag_first_is_best = True
+                    break
 
                 e = random.sample(vehicles, 1)[0]
                 if fleet_available_check != [0 for _ in range(len(fleet_available_check))]:
