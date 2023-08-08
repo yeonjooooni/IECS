@@ -227,11 +227,11 @@ def reallocate_veh(max_car, veh_table, asc_dist_dict, unassigned_orders, termina
             # 가까운 터미널 부터 돌면서 가져올 수 있는 차량의 수 확인
             for dist, time, arrival_terminal in asc_dist_dict[terminal]:
                 if not unassigned_orders[arrival_terminal]:
-                    available_cars = max(0, len(veh_table[veh_table["CurrentCenter"]==arrival_terminal]) - max_car[arrival_terminal])
+                    available_cars = max(0, len(veh_table[(veh_table["CurrentCenter"] == arrival_terminal) & (veh_table["CenterArriveTime"] == 0)]) - max_car[arrival_terminal])
                     # 가져올 차량이 있는 경우 해당 수가 필요 차량보다 많으면 break, 아니면 더하고 continue
                     if available_cars:
                         # available_cars가 현재 필요한 차량보다 많아서 random하게 뽑는 경우
-                        if available_cars>unassigned_orders[terminal]-car_taken:
+                        if available_cars>=unassigned_orders[terminal]-car_taken:
                             cur_car_taken = unassigned_orders[terminal]-car_taken
                             # 현재 터미널에 있는 차량들의 idx lst 생성
                             lst = [i for i in range(len(total_dict[arrival_terminal][0])) if total_dict[arrival_terminal][0][i] != 0]
@@ -240,7 +240,10 @@ def reallocate_veh(max_car, veh_table, asc_dist_dict, unassigned_orders, termina
                                 car_idx = random.sample(lst, cur_car_taken)
                             else:
                                 car_idx = lst
+                            print("########차량 이동########")
                             print("car_idx", car_idx)
+                            print("from", arrival_terminal, "to", terminal)
+                            print("#########################")
                             # 각 터미널의 차량 증감 처리 + 비용처리도 필요함! -> history를 만드는게 좋을듯
                             for idx in car_idx:
                                 veh_table.loc[total_dict[arrival_terminal][2][idx], 'CurrentCenter'] = terminal
@@ -251,15 +254,20 @@ def reallocate_veh(max_car, veh_table, asc_dist_dict, unassigned_orders, termina
                             for i in range(3):
                                 for j in car_idx:
                                     total_dict[terminal][i].append(total_dict[arrival_terminal][i][j])
-                                total_dict[arrival_terminal][i] = [total_dict[arrival_terminal][i][j] for k in range(len(total_dict[arrival_terminal][i])) if k not in car_idx]
-                            car_taken = unassigned_orders[terminal]
+                                total_dict[arrival_terminal][i] = [total_dict[arrival_terminal][i][k] for k in range(len(total_dict[arrival_terminal][i])) if k not in car_idx]
+                            #car_taken = unassigned_orders[terminal]
                             break
 
                         else:
                             # available_cars를 모두 가져오는 경우
                             cur_car_taken = available_cars
                             # 모든 차량을 가져오기 때문에 그냥 총 idx lst생성
-                            car_idx = [i for i in range(len(total_dict[arrival_terminal][0]))]
+                            car_idx = [i for i in range(len(total_dict[arrival_terminal][0])) if total_dict[arrival_terminal][0][i] != 0]
+                            car_idx = random.sample(car_idx, available_cars)
+                            print("########차량 이동########")
+                            print("car_idx", car_idx)
+                            print("from", arrival_terminal, "to", terminal)
+                            print("#########################")
                             # 각 터미널의 차량 증감 처리 + 비용처리도 필요함! -> history를 만드는게 좋을듯
                             for idx in car_idx:
                                 veh_table.loc[total_dict[arrival_terminal][2][idx], 'CurrentCenter'] = terminal
@@ -269,8 +277,10 @@ def reallocate_veh(max_car, veh_table, asc_dist_dict, unassigned_orders, termina
                             for i in range(3):
                                 for j in car_idx:
                                     total_dict[terminal][i].append(total_dict[arrival_terminal][i][j])
-                                total_dict[arrival_terminal][i] = [total_dict[arrival_terminal][i][j] for k in range(len(total_dict[arrival_terminal][i])) if k not in car_idx]
+                                total_dict[arrival_terminal][i] = [total_dict[arrival_terminal][i][k] for k in range(len(total_dict[arrival_terminal][i])) if k not in car_idx]
                             car_taken += cur_car_taken
+                            if car_taken == unassigned_orders[terminal]:
+                                break
                             continue
 
 def check_max_car(terminal, max_car, fleet_used_now):
