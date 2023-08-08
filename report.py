@@ -8,24 +8,24 @@ from itertools import cycle
 from matplotlib import pyplot as plt
 from eval import *
 from utils import *
-def output_report(solution, distance_matrix, parameters, velocity, fixed_cost, variable_cost, route, time_window, time_absolute):
+def output_report(solution, distance_matrix, parameters, velocity, fixed_cost, variable_cost, route, time_window, time_absolute, order_id, city_name_list):
     column_names = ['ORD_NO', 'VehicleID', 'Sequence', 'SiteCode', 'ArrivalTime', 'WaitingTime', 'ServiceTime', 'DepartureTime', 'Delivered']
     tt = 0
     td = 0 
     tc = 0
     tw_st = parameters[:, 3]
     report_lst = []
-    
     # Create the Delivered table at specified times
     delivered_table = pd.DataFrame()
-    
     for i in range(0, len(solution[1])):
-        dist = evaluate_distance(distance_matrix, solution[0][i], solution[1][i],parameters)
-        wait, time = evaluate_time(distance_matrix, parameters, solution[0][i], solution[1][i], velocity = [velocity[solution[2][i][0]]])[0:2]
         reversed_sol = copy.deepcopy(solution[1][i])
         reversed_sol.reverse()
-        cap = evaluate_capacity(parameters, solution[0][i], reversed_sol) 
+        cap          = evaluate_capacity(parameters, solution[0][i], reversed_sol) 
         cap.reverse()
+        #solution[1][i]  = evaluate_subroute(solution[1][i],parameters)
+        dist = evaluate_distance(distance_matrix, solution[0][i], solution[1][i],parameters)
+        wait, time = evaluate_time(distance_matrix, parameters, solution[0][i], solution[1][i], velocity = [velocity[solution[2][i][0]]])[0:2]
+
         leave_cap = copy.deepcopy(cap)
         for n in range(1, len(leave_cap)-1):
             leave_cap[n] = cap[n+1] 
@@ -34,30 +34,34 @@ def output_report(solution, distance_matrix, parameters, velocity, fixed_cost, v
             subroute = [solution[0][i] + solution[1][i] + solution[0][i]]
         else: #elif (route == 'open'):
             subroute = [solution[0][i] + solution[1][i]]
-        
         for j in range(0, len(subroute[0])):
             if (j == 0):
                 activity = 'start'
                 arrive_time = round(time[j], 2)
                 delivered_status = 'Null'
+                ORD_NO = None
             else:
                 arrive_time = round(time[j] - tw_st[subroute[0][j]] - wait[j], 2)
             if (j > 0 and j < len(subroute[0]) - 1):
                 activity = 'service'  
                 delivered_status = 'Yes'
+                ORD_NO = order_id[solution[1][i][j-1]]
             if (j == len(subroute[0]) - 1):
                 activity = 'finish'
                 delivered_status = "temp"
+                ORD_NO = None
                 if (time[j] > tt):
                     tt = time[j]
                 td = td + dist[j]
                 tc = tc + cost[j]
-                continue
-            
+                #continue
+            city_name = city_name_list[subroute[0][j]]
+                        
             # # Prepare data for the Delivered column
             # # 우리는 아직 service가 마무리 안된 건수가 없음. 그리고 finish는 출력할 필요 없음
             #activity = finish, 우리가 보려고 표시한 return한 차량
-            report_lst.append([solution[2][i][0], 'VEH_' + str(solution[2][i][0]), j+1, subroute[0][j], 
+        
+            report_lst.append([ORD_NO, 'VEH_' + str(solution[2][i][0]), j+1, city_name, 
                                min_to_day(arrive_time+time_absolute), round(wait[j], 2)+time_absolute, round(time[j], 2)+time_absolute if activity != 'start' else 'Null', min_to_day(round(time[j], 2)+time_absolute) if activity == 'service' else 'Null', delivered_status])
         
         report_lst.append(['-//-', '-//-', '-//-', '-//-', '-//-', '-//-', '-//-', '-//-', '-//-'])
