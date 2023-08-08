@@ -122,3 +122,6 @@ def show_report(solution, distance_matrix,  parameters, velocity, fixed_cost, va
     report_lst.append(['TOTAL', '', '','', '', '', '', '', '', round(td,2), round(tc,2)])
     report_df = pd.DataFrame(report_lst, columns = column_names)
     return report_df
+
+# def vehicle_output_report():
+#     column_names = ['VehicleID', 'Count', 'Volume', 'TravelDistance', 'WorkTime', 'TravelTime', 'ServiceTime', 'WaitingTime', 'TotalCost', 'FixedCost',	'VariableCost']
