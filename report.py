@@ -39,7 +39,7 @@ def output_report(solution, distance_matrix, parameters, velocity, fixed_cost, v
                 activity = 'start'
                 arrive_time = round(time[j], 2)
                 delivered_status = 'Null'
-                ORD_NO = None
+                ORD_NO = 'Null'
             else:
                 arrive_time = round(time[j] - tw_st[subroute[0][j]] - wait[j], 2)
             if (j > 0 and j < len(subroute[0]) - 1):
@@ -127,5 +127,6 @@ def show_report(solution, distance_matrix,  parameters, velocity, fixed_cost, va
     report_df = pd.DataFrame(report_lst, columns = column_names)
     return report_df
 
-# def vehicle_output_report():
-#     column_names = ['VehicleID', 'Count', 'Volume', 'TravelDistance', 'WorkTime', 'TravelTime', 'ServiceTime', 'WaitingTime', 'TotalCost', 'FixedCost',	'VariableCost']
+def vehicle_output_report(output_report):
+    column_names = ['VehicleID', 'Count', 'Volume', 'TravelDistance', 'WorkTime', 'TravelTime', 'ServiceTime', 'WaitingTime', 'TotalCost', 'FixedCost',	'VariableCost']
+    vehicle = {}
