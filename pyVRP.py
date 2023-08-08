@@ -402,7 +402,9 @@ def breeding(cost, population, fitness, distance_matrix, n_depots, elite, veloci
 
 # Function: Mutation - Swap
 def mutation_tsp_vrp_swap(individual):
-    if (len(individual[1]) == 1):
+    if len(individual[1]) == 0:
+        return individual
+    elif (len(individual[1]) == 1):
         k1 = random.sample(list(range(0, len(individual[1]))), 1)[0]
         k2 = k1
     else:
@@ -419,7 +421,9 @@ def mutation_tsp_vrp_swap(individual):
 
 # Function: Mutation - Insertion
 def mutation_tsp_vrp_insertion(individual):
-    if (len(individual[1]) == 1):
+    if len(individual[1]) == 0:
+        return individual
+    elif (len(individual[1]) == 1):
         k1 = random.sample(list(range(0, len(individual[1]))), 1)[0]
         k2 = k1
     else:

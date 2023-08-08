@@ -79,7 +79,6 @@ def plot_tour_latlong (lat_long, solution, n_depots, route):
 
 def preprocess_demand_df():
     demand_df = pd.read_csv('./과제3 실시간 주문 대응 Routing 최적화 (orders_table) 수정완료.csv', encoding='cp949')
-
     # 3일간의 하차 가능 시작과 끝 시간 리스트 계산
     landing_start_times = []
     landing_end_times = []
@@ -93,21 +92,21 @@ def preprocess_demand_df():
         landing_end_times.append(end_list)
     demand_df['landing_start_times'] = landing_start_times
     demand_df['landing_end_times'] = landing_end_times 
-
-    order_id = {}
-
-    for terminal_id, group_df in demand_df.groupby(['터미널ID', 'date', 'Group']):
-        cnt = 0
-        for idx, row in group_df.iterrows():
-            id = f"{row['터미널ID'].split('_')[1].zfill(3)}{row['date'][-2:]}{row['Group']}{str(cnt).zfill(3)}"
-            if (terminal_id, row['date'], row['Group']) in order_id:
-                cnt = order_id[(terminal_id, row['date'], row['Group'])] + 1
-            order_id[(terminal_id, row['date'], row['Group'])] = cnt
-            cnt += 1
-            demand_df.loc[idx, 'order_id'] = id  # 새로운 열 'order_id'에 생성한 ID를 추가
-    demand_df = demand_df.sort_values(by=['터미널ID', 'date', 'Group'])
-
     return demand_df
+
+def update_landing_available_time_zone(unassigned_rows):
+    def update_times(row):
+        landing_start_times = row['landing_start_times']
+        landing_end_times = row['landing_end_times']
+        
+        updated_start_times = [max(time - 360, 0) for time in landing_start_times]
+        updated_end_times = [max(time - 360, 0) for time in landing_end_times]
+        
+        row['landing_start_times'] = updated_start_times
+        row['landing_end_times'] = updated_end_times
+        return row
+    
+    return unassigned_rows.apply(update_times, axis=1)
 
 def preprocess_coordinates(demand_df, pivot_table, id_list_only_in_tmp_df):
     departure_coordinates = demand_df.drop_duplicates(['착지ID'])[['착지ID', '하차지_위도', '하차지_경도']]

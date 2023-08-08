@@ -12,7 +12,7 @@ from pyVRP import *
 from utils import *
 
 def run_ga(terminal_id, day, group, demand_df):
-    global unassigned_orders_count_dict, unassigned_rows_dict, veh_table
+    global unassigned_orders_count_dict, unassigned_rows_dict, veh_table, unassigned_orders_forever
     
     real_distance_matrix = pd.read_csv("./distance_matrix.csv", index_col=0)
 
@@ -104,8 +104,13 @@ def run_ga(terminal_id, day, group, demand_df):
     unassigned_rows = tmp_df.iloc[adjusted_unassigned_idx]
 
     unassigned_orders_count_dict.update({terminal_id: len(unassigned_rows)})
+
     if not unassigned_rows.empty:
+        # 넘기기 전에 하차가능시간 조정
+        unassigned_rows = update_landing_available_time_zone(unassigned_rows = unassigned_rows)
         unassigned_rows_dict.update({terminal_id: unassigned_rows})
+        if day == 6 and group == 3:
+            unassigned_orders_forever.update({terminal_id: len(unassigned_rows)})
     else:
         unassigned_rows_dict.update({terminal_id: None})
 
@@ -121,7 +126,7 @@ veh_table = pd.read_csv('./과제3 실시간 주문 대응 Routing 최적화 (ve
 # cueerntcenter : 이 veh이 도착할 center, centerarrivetime : 이 veh이 center에 도착할 시간, isused : 이 veh이 사용한 적 있는지 여부
 veh_table['CurrentCenter'] = veh_table['StartCenter']
 veh_table['CenterArriveTime'] = 0
-veh_table['carHistory'] = []
+# veh_table['carHistory'] = []
 veh_table['IsUsed'] = 0
 
 # time_matrix, distance_matrix 만드는 코드 추가 필요
@@ -135,6 +140,10 @@ demand_df = preprocess_demand_df()
 
 max_car = set_max_car(terminal_lst)
 
+infeasible_solution = []
+unassigned_orders_forever = {}
+
+total_cost = 0
 unassigned_rows_dict = defaultdict(lambda : None)
 
 ga_column_names = ['Route', 'Vehicle', 'Activity', 'Job_도착지점의 index', 'Arrive_Load', 'Leave_Load', 'Wait_Time', 'Arrive_Time','Leave_Time', 'Distance', 'Costs']
@@ -142,7 +151,7 @@ total_ga_report = pd.DataFrame([], columns = ga_column_names)
 output_column_names = ['ORD_NO', 'VehicleID', 'Sequence', 'SiteCode', 'ArrivalTime', 'WaitingTime', 'ServiceTime', 'DepartureTime', 'Delivered']
 total_output_report = pd.DataFrame([], columns=output_column_names)
 
-for day in range(0,6):
+for day in range(7):
     for group in range(4):
         for terminal_id in terminal_lst:
             print("terminal id:", terminal_id)
@@ -153,6 +162,10 @@ for day in range(0,6):
             print("####################################")
             if ga_report is None:
                 continue
+
+            total_cost += float(ga_report['Costs'].tolist()[-1])
+            if float(ga_report['Costs'].tolist()[-1]) > 1000000:
+                infeasible_solution.append(f"day-{day}-group-{group}-{terminal_id}")
 
             max_car = check_max_car(terminal_id, max_car, fleet_used_now)
             total_ga_report = pd.concat([total_ga_report, ga_report])
@@ -165,4 +178,6 @@ for day in range(0,6):
         # 시간 6시간 흐름
         veh_table['CenterArriveTime'] = veh_table['CenterArriveTime'].apply(lambda x: max(x - 360, 0))
 
-veh_output_table = vehicle_output_report(total_output_report)
+print("total_cost :", total_cost)
+print("infeasible_solution :", infeasible_solution)
+print("unassigned_orders_forever :", unassigned_orders_forever)
