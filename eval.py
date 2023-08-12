@@ -111,5 +111,3 @@ def evaluate_depot(n_depots, individual, real_distance_matrix):
                 d_1 = d_2
                 individual[0][j] = [i]
     return individual
-
-
