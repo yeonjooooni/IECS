@@ -216,9 +216,14 @@ def get_total_dict(veh_table):
         fleet_idx = center_data.index.tolist()
         total_dict[center] = [fleet_available, fleet_available_no_fixed_cost, fleet_idx]
     return total_dict
+# history
+def update_history(day, group, moved_df, veh_ID_list, origin, destination, veh_table, dist):
+    for item in veh_ID_list:
+        row = [veh_table.loc[item, 'VehNum'], origin, destination, day, group, veh_table.loc[item, 'VariableCost'] * dist]
+        moved_df.loc[moved_df.shape[0]] = row
 
 # 현재까지 사용한 차 수, 각 터미널별 현재 차 수(veh_table), 터미널 별 가장 가까운 터미널들, 부족한 차 수(==미처리된 주문수)
-def reallocate_veh(max_car, veh_table, asc_dist_dict, unassigned_orders, terminals, total_dict):
+def reallocate_veh(max_car, veh_table, asc_dist_dict, unassigned_orders, terminals, total_dict, day, group, moved_df):
     # 터미널별 필요 차량 수 확인(==미처리된 주문 수)
     for terminal in terminals:
         if unassigned_orders[terminal]:
@@ -243,6 +248,7 @@ def reallocate_veh(max_car, veh_table, asc_dist_dict, unassigned_orders, termina
                             print("car_idx", car_idx)
                             print("from", arrival_terminal, "to", terminal)
                             print("#########################")
+                            update_history(day, group, moved_df, car_idx, terminal, arrival_terminal, veh_table, dist)
                             # 각 터미널의 차량 증감 처리 + 비용처리도 필요함! -> history를 만드는게 좋을듯
                             for idx in car_idx:
                                 veh_table.loc[total_dict[arrival_terminal][2][idx], 'CurrentCenter'] = terminal
@@ -267,6 +273,7 @@ def reallocate_veh(max_car, veh_table, asc_dist_dict, unassigned_orders, termina
                             print("car_idx", car_idx)
                             print("from", arrival_terminal, "to", terminal)
                             print("#########################")
+                            update_history(day, group, moved_df, car_idx, terminal, arrival_terminal, veh_table, dist)
                             # 각 터미널의 차량 증감 처리 + 비용처리도 필요함! -> history를 만드는게 좋을듯
                             for idx in car_idx:
                                 veh_table.loc[total_dict[arrival_terminal][2][idx], 'CurrentCenter'] = terminal
