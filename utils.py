@@ -130,7 +130,7 @@ def get_checked_fleet_cnt(vehicles_within_intervals):
 
 def vehicle_return_time(clean_report, fleet_used_now, vehicle_types):
     return_time = [0 for _ in range(vehicle_types)]
-
+    # groupby(['Route']) 에서 groupby('Route')로 수정
     for route, group in clean_report.groupby('Route'):
         last_row = group.iloc[-1]
         vehicle_type = last_row['Vehicle']
