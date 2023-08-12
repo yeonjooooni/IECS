@@ -478,7 +478,7 @@ def elite_distance(individual, distance_matrix, route, parameters):
     return round(td,2)
 
 # GA-VRP Function
-def genetic_algorithm_vrp(coordinates, distance_matrix, parameters, velocity, fixed_cost, variable_cost, capacity, real_distance_matrix, population_size = 5, vehicle_types = 1, n_depots = 1, route = 'closed', model = 'vrp', time_window = 'without', fleet_available = [], mutation_rate = 0.1, elite = 0, generations = 50, penalty_value = 1000, graph = True, selection = 'rw', fleet_available_no_fixed_cost=None, time_absolute=0, order_id=[], city_name_list=[]):    
+def genetic_algorithm_vrp(coordinates, distance_matrix, parameters, velocity, fixed_cost, variable_cost, capacity, real_distance_matrix, population_size = 5, vehicle_types = 1, n_depots = 1, route = 'closed', model = 'vrp', time_window = 'without', fleet_available = [], mutation_rate = 0.1, elite = 0, generations = 50, penalty_value = 1000, graph = True, selection = 'rw', fleet_available_no_fixed_cost=None, time_absolute=0, order_id=[], city_name_list=[], vehicle_index = []):    
     start           = tm.time()
     count           = 0
     solution_report = ['None']
@@ -524,7 +524,7 @@ def genetic_algorithm_vrp(coordinates, distance_matrix, parameters, velocity, fi
         value = sublist[0]
         fleet_used_now[value] += 1
 
-    output = output_report(solution, distance_matrix, parameters, velocity, fixed_cost, variable_cost, route, time_window, time_absolute, order_id=order_id, city_name_list=city_name_list)
+    output = output_report(solution, distance_matrix, parameters, velocity, fixed_cost, variable_cost, route, time_window, time_absolute, order_id=order_id, city_name_list=city_name_list, vehicle_index = vehicle_index)
     solution_report = show_report(solution, distance_matrix, parameters, velocity, fixed_cost, variable_cost, route, time_window, real_distance_matrix, fleet_available_no_fixed_cost, time_absolute)
 
     end = tm.time()

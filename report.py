@@ -8,7 +8,7 @@ from itertools import cycle
 from matplotlib import pyplot as plt
 from eval import *
 from utils import *
-def output_report(solution, distance_matrix, parameters, velocity, fixed_cost, variable_cost, route, time_window, time_absolute, order_id, city_name_list):
+def output_report(solution, distance_matrix, parameters, velocity, fixed_cost, variable_cost, route, time_window, time_absolute, order_id, city_name_list, vehicle_index):
     column_names = ['ORD_NO', 'VehicleID', 'Sequence', 'SiteCode', 'ArrivalTime', 'WaitingTime', 'ServiceTime', 'DepartureTime', 'Delivered']
     tt = 0
     td = 0 
@@ -61,7 +61,7 @@ def output_report(solution, distance_matrix, parameters, velocity, fixed_cost, v
             # # 우리는 아직 service가 마무리 안된 건수가 없음. 그리고 finish는 출력할 필요 없음
             #activity = finish, 우리가 보려고 표시한 return한 차량
         
-            report_lst.append([ORD_NO, 'VEH_' + str(solution[2][i][0]), j+1, city_name, 
+            report_lst.append([ORD_NO, 'VEH_' + str(vehicle_index[solution[2][i][0]]), j+1, city_name, 
                                min_to_day(arrive_time+time_absolute), round(wait[j], 2)+time_absolute, round(time[j], 2)+time_absolute if activity != 'start' else 'Null', min_to_day(round(time[j], 2)+time_absolute) if activity == 'service' else 'Null', delivered_status])
         
         report_lst.append(['-//-', '-//-', '-//-', '-//-', '-//-', '-//-', '-//-', '-//-', '-//-'])
