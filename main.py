@@ -96,7 +96,7 @@ def run_ga(terminal_id, day, group, demand_df):
     generations     = 10    # GA Number of Generations
     
     # Run GA Function
-    ga_report, output_report, solution, fleet_used_now = genetic_algorithm_vrp(coordinates, distance_matrix, parameters, velocity, fixed_cost, variable_cost, capacity, real_distance_matrix, population_size, vehicle_types, n_depots, route, model, time_window, fleet_available, mutation_rate, elite, generations, penalty_value, graph, 'rw', fleet_available_no_fixed_cost, order_id = order_id, city_name_list=city_name_list)
+    ga_report, output_report, solution, fleet_used_now = genetic_algorithm_vrp(coordinates, distance_matrix, parameters, velocity, fixed_cost, variable_cost, capacity, real_distance_matrix, population_size, vehicle_types, n_depots, route, model, time_window, fleet_available, mutation_rate, elite, generations, penalty_value, graph, 'rw', fleet_available_no_fixed_cost, order_id = order_id, city_name_list=city_name_list, vehicle_index = vehicle_index)
     total_ga_report = pd.concat([total_ga_report, ga_report])
     total_output_report = pd.concat([total_output_report, output_report])        
     
