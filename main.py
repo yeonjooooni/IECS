@@ -1,5 +1,6 @@
 import pandas as pd
 import random
+random.seed(42)
 import numpy as np
 import copy
 import os
@@ -12,10 +13,10 @@ from pyVRP import *
 from utils import *
 
 def run_ga(terminal_id, day, group, demand_df):
-    global unassigned_orders_count_dict, unassigned_rows_dict, veh_table, unassigned_orders_forever
+    global unassigned_orders_count_dict, unassigned_rows_dict, veh_table, unassigned_orders_forever, total_ga_report, total_output_report
     
     real_distance_matrix = pd.read_csv("./distance_matrix.csv", index_col=0)
-
+    
     tmp_df = demand_df[demand_df['date']==f'2023-05-0{1+day}']
     tmp_df = tmp_df[tmp_df['Group'].isin([group])]
     tmp_df = tmp_df[tmp_df['터미널ID']==terminal_id]
@@ -74,9 +75,13 @@ def run_ga(terminal_id, day, group, demand_df):
     graph       = False         # True, False
 
     total_dict = get_total_dict(veh_table)
-
+    if terminal_id == 'O_144':
+        veh_table[veh_table['CurrentCenter'] == 'O_144'].to_csv(f'O_144_{day}_{group}.csv', index=False, encoding='cp949')
+    
+    #("total_dict_idx", total_dict[terminal_id][2])
     tmp_veh = veh_table[veh_table['CurrentCenter'] == terminal_id]
     vehicle_index       = tmp_veh.index.to_list()
+    #print("vehicle_index", vehicle_index)
     vehicle_types       = tmp_veh.shape[0] # 해당 출발지에 속한 차량 수
     fixed_cost          = tmp_veh['FixedCost'].values.tolist()
     variable_cost       = tmp_veh['VariableCost'].values.tolist()
@@ -93,12 +98,15 @@ def run_ga(terminal_id, day, group, demand_df):
     generations     = 3    # GA Number of Generations
     
     # Run GA Function
-    ga_report, output_report, solution, fleet_used_now = genetic_algorithm_vrp(coordinates, distance_matrix, parameters, velocity, fixed_cost, variable_cost, capacity, real_distance_matrix, population_size, vehicle_types, n_depots, route, model, time_window, fleet_available, mutation_rate, elite, generations, penalty_value, graph, 'rw', fleet_available_no_fixed_cost, order_id = order_id, city_name_list=city_name_list)  
+    ga_report, output_report, solution, fleet_used_now = genetic_algorithm_vrp(coordinates, distance_matrix, parameters, velocity, fixed_cost, variable_cost, capacity, real_distance_matrix, population_size, vehicle_types, n_depots, route, model, time_window, fleet_available, mutation_rate, elite, generations, penalty_value, graph, 'rw', fleet_available_no_fixed_cost, time_absolute = 1440 * day  +  360 * group,  order_id = order_id, city_name_list=city_name_list, vehicle_index = vehicle_index)
+    total_ga_report = pd.concat([total_ga_report, ga_report])
+    total_output_report = pd.concat([total_output_report, output_report])        
     
     # 사용한 차량의 복귀 시간대 파악
     clean_report = ga_report[ga_report['Route'].str.startswith('#')]
     return_time = vehicle_return_time(clean_report, fleet_used_now, vehicle_types)
     update_veh_table(veh_table, vehicle_index, return_time, vehicle_types, terminal_id)
+    #print("CenterArriveTime", veh_table['CenterArriveTime'].values.tolist())
 
     # 미처리 주문 파악
     unassigned_idx = solution[3]
@@ -116,7 +124,7 @@ def run_ga(terminal_id, day, group, demand_df):
     else:
         unassigned_rows_dict.update({terminal_id: None})
 
-    return ga_report, output_report, fleet_used_now
+    return ga_report, output_report, fleet_used_now, len(unassigned_idx)
 
 terminal_table = pd.read_csv('./과제3 실시간 주문 대응 Routing 최적화 (Terminals).csv', encoding='cp949')
 terminal_lst = terminal_table['ID'].unique()
@@ -128,7 +136,6 @@ veh_table = pd.read_csv('./과제3 실시간 주문 대응 Routing 최적화 (ve
 # cueerntcenter : 이 veh이 도착할 center, centerarrivetime : 이 veh이 center에 도착할 시간, isused : 이 veh이 사용한 적 있는지 여부
 veh_table['CurrentCenter'] = veh_table['StartCenter']
 veh_table['CenterArriveTime'] = 0
-# veh_table['carHistory'] = []
 veh_table['IsUsed'] = 0
 
 # time_matrix, distance_matrix 만드는 코드 추가 필요
@@ -153,8 +160,9 @@ total_ga_report = pd.DataFrame([], columns = ga_column_names)
 output_column_names = ['ORD_NO', 'VehicleID', 'Sequence', 'SiteCode', 'ArrivalTime', 'WaitingTime', 'ServiceTime', 'DepartureTime', 'Delivered']
 total_output_report = pd.DataFrame([], columns=output_column_names)
 
-for day in range(7):
-    for group in range(4):
+moved_df = pd.DataFrame(columns=['Veh_ID', 'Origin', 'Destination', 'day', 'group', 'travel_cost'])
+for day in range(0,1): #(0,7)
+    for group in range(4): #(4)
         for terminal_id in terminal_lst:
             print("terminal id:", terminal_id)
             print(f"day {day} group {group}")
@@ -165,25 +173,27 @@ for day in range(7):
             if ga_report is None:
                 continue
             ga_report['Arrive_Time'] = ga_report['Arrive_Time'].apply(min_to_day)
-            ga_report['Leave_Time'] = ga_report['Leave_Time'].apply(min_to_day)
-            ga_report.to_csv(f'./report/ga_report-day-{day}-group-{group}-{terminal_id}.csv', encoding= 'cp949', index = False)
-            output_report.to_csv(f'./report/output_report-day-{day}-group-{group}-{terminal_id}.csv', encoding= 'cp949', index = False)
+            ga_report['Leave_Time']  = ga_report['Leave_Time'].apply(min_to_day)
+            # ga_report.to_csv(f'./report/ga_report-day-{day}-group-{group}-{terminal_id}.csv', encoding= 'cp949', index = False)
+            # output_report.to_csv(f'./report/output_report-day-{day}-group-{group}-{terminal_id}.csv', encoding= 'cp949', index = False)
             
             total_cost += float(ga_report['Costs'].tolist()[-1])
             if float(ga_report['Costs'].tolist()[-1]) > 1000000:
                 infeasible_solution.append(f"day-{day}-group-{group}-{terminal_id}")
 
-            max_car = check_max_car(terminal_id, max_car, fleet_used_now)
-            total_ga_report = pd.concat([total_ga_report, ga_report])
-            total_output_report = pd.concat([total_output_report, output_report])      
-            total_ga_report.to_csv('./test/total_ga_Report.csv', encoding= 'cp949', index = False)
-            total_output_report.to_csv('./test/total_output_Report.csv', encoding= 'cp949', index = False) 
+            max_car = check_max_car(terminal_id, max_car, fleet_used_now, day, num_unassigned)
+
         total_dict = get_total_dict(veh_table)
         # 미처리 주문에 대한 차량 재배치
-        reallocate_veh(max_car, veh_table, asc_dist_dict, unassigned_orders_count_dict, terminal_lst, total_dict)
+        reallocate_veh(max_car, veh_table, asc_dist_dict, unassigned_orders_count_dict, terminal_lst, total_dict, day, group, moved_df)
         # 시간 6시간 흐름
         veh_table['CenterArriveTime'] = veh_table['CenterArriveTime'].apply(lambda x: max(x - 360, 0))
 
+        total_output_report = total_output_report[total_output_report['ORD_NO'] != '-//-']
+        total_output_report = total_output_report.sort_values(by=['VehicleID', 'Sequence'])
+        total_output_report.to_csv(f"total_output_report_day_{day+1}_group_{group+1}.csv", index=False, encoding='cp949')
+        
 print("total_cost :", total_cost)
 print("infeasible_solution :", infeasible_solution)
 print("unassigned_orders_forever :", unassigned_orders_forever)
+print("terminal to terminal cost:", moved_df['travel_cost'].sum())

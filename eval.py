@@ -59,8 +59,6 @@ def evaluate_time(distance_matrix, parameters, depot, subroute, velocity):
     
     time[0:0] = [0]
     wait[0:0] = [0]
-    print("time", time)
-    print("------------------------")
     return wait, time, day_num
 
 # Function: Subroute Capacity

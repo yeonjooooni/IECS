@@ -150,18 +150,6 @@ def min_to_day(minute):
         return day+" "+hr.zfill(2)+":"+minute.zfill(2)
 
 
-# def time_difference(day1, day2):
-#     #year difference는 구현 안해놓음.
-#     month_dif = month(len("2023-05-"))-
-#     day_dif = day1[]
-#     #minute으로 받은 거 해당 날짜로 바꿔주는 format
-#     minute = int(round(minute, 0))
-#     hr = minute // 60
-#     minute = str(minute % 60)
-#     day = "2023-05-0{}".format(1+hr//24)
-#     hr = str(hr % 24)
-#     return day+" "+hr.zfill(2)+":"+minute.zfill(2)
-
 # 시간을 분 단위로 변환하는 함수
 def time_to_minutes(time_str):
     hour, minute = map(int, time_str.split(':'))
@@ -204,6 +192,7 @@ def update_veh_table(veh_table, vehicle_index, return_time, vehicle_types, termi
         if return_time[idx] != 0:
             veh_table.loc[vehicle_index[idx], 'CenterArriveTime'] = return_time[idx]
             veh_table.loc[vehicle_index[idx], 'IsUsed'] = 1
+    # print(veh_table.head(15))
 
 # terminal별로 각 terminal 까지의 (거리,시간,도착터미널)을 value로 만들고, 거리 기준 정렬해주는 함수
 def time_distance_in_order(time_matrix, distance_matrix, terminals):
