@@ -126,4 +126,3 @@ def show_report(solution, distance_matrix,  parameters, velocity, fixed_cost, va
     report_lst.append(['TOTAL', '', '','', '', '', '', '', '', round(td,2), round(tc,2)])
     report_df = pd.DataFrame(report_lst, columns = column_names)
     return report_df
-

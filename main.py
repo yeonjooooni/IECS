@@ -125,6 +125,9 @@ def run_ga(terminal_id, day, group, demand_df):
 
     return total_ga_report, total_output_report, fleet_used_now, len(unassigned_idx)
 
+# distance_matrix랑 pivot_table_filled 만드는 함수 : 코드 완성한 다음에 테스트할때 실행
+#make_matrix_csv()
+
 terminal_table = pd.read_csv('./과제3 실시간 주문 대응 Routing 최적화 (Terminals).csv', encoding='cp949')
 terminal_lst = terminal_table['ID'].unique()
 

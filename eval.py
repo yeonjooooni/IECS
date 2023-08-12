@@ -114,4 +114,19 @@ def evaluate_depot(n_depots, individual, real_distance_matrix):
                 individual[0][j] = [i]
     return individual
 
+def make_csv():
+    od_df = pd.read_csv('./과제3 실시간 주문 대응 Routing 최적화 (od_matrix) 수정완료.csv')
+    unique_destinations = od_df['Destination'].unique()
+    matrix = pd.DataFrame(columns = unique_destinations, index = unique_destinations)
+
+    for index, row in tqdm(df.iterrows(), total = df.shape[0]):
+        matrix.loc[row['origin'], row['Destination']] = row['Time_minute']
+
+    matrix = matrix.fillna(0)
+    matrix.to_csv("./pivot_table_filled.csv")
+
+    for index, row in tqdm(df.iterrows(), total = df.shape[0]):
+        matrix.loc[row['origin'], row['Destination']] = row['Time_minute']
+
+    matrix.to_csv("./pivot_table_filled.csv")
 
