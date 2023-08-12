@@ -32,43 +32,6 @@ def evaluate_vehicle(vehicle_types, individual, distance_matrix, parameters, vel
                 individual_      = copy.deepcopy(individual)
     return individual
 
-# Function: Routes Break Capacity
-def cap_break(vehicle_types, individual, parameters, capacity):
-    go_on = True
-    while (go_on):
-        individual_ = copy.deepcopy(individual)
-        solution    = [[], [], []]
-        for i in range(0, len(individual_[0])):
-            cap   = evaluate_capacity(parameters, individual_[0][i], individual_[1][i]) 
-            sep   = [x >  capacity[individual_[2][i][0]] for x in cap[1:-1] ]
-            sep_f = [individual_[1][i][x] for x in range(0, len(individual_[1][i])) if sep[x] == False]
-            sep_t = [individual_[1][i][x] for x in range(0, len(individual_[1][i])) if sep[x] == True ]
-            if (len(sep_t) > 0 and len(sep_f) > 0):
-                solution[0].append(individual_[0][i])
-                solution[0].append(individual_[0][i])
-                solution[1].append(sep_f)
-                solution[1].append(sep_t)
-                solution[2].append(individual_[2][i])
-                solution[2].append(individual_[2][i])
-            if (len(sep_t) > 0 and len(sep_f) == 0):
-                solution[0].append(individual_[0][i])
-                solution[1].append(sep_t)
-                solution[2].append(individual_[2][i])
-            if (len(sep_t) == 0 and len(sep_f) > 0):
-                solution[0].append(individual_[0][i])
-                solution[1].append(sep_f)
-                solution[2].append(individual_[2][i])
-        
-        solution.append([k for k in individual_[3]])
-        individual_ = copy.deepcopy(solution)
-        if (individual == individual_):
-            go_on      = False
-        else:
-            go_on      = True
-            individual = copy.deepcopy(solution)
-    #print("cap_break", individual)
-    return individual
-
 # Function: Route Evalution & Correction
 # 각 population의 cost만 계산
 def target_function(population, distance_matrix, parameters, velocity, fixed_cost, variable_cost, capacity, penalty_value, time_window, route, real_distance_matrix, fleet_available = [], fleet_available_no_fixed_cost=None):
@@ -500,7 +463,6 @@ def genetic_algorithm_vrp(coordinates, distance_matrix, parameters, velocity, fi
     elite_cst        = copy.deepcopy(cost[0][0])
     solution         = copy.deepcopy(population[0])
 
-    #print('Generation = ', count, ' Distance = ', elite_ind, ' f(x) = ', round(elite_cst, 2)) 
     while (count <= generations-1):
         offspring        = breeding(cost, population, fitness, distance_matrix, n_depots, elite, velocity, max_capacity, fixed_cost, variable_cost, penalty_value, time_window, parameters, route, vehicle_types, fleet_available,real_distance_matrix, fleet_available_no_fixed_cost=fleet_available_no_fixed_cost)          
         offspring        = mutation(offspring, mutation_rate = mutation_rate, elite = elite)
