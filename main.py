@@ -21,7 +21,7 @@ def run_ga(terminal_id, day, group, demand_df):
     tmp_df = tmp_df[tmp_df['터미널ID']==terminal_id]
     tmp_df = pd.concat([unassigned_rows_dict[terminal_id], tmp_df], axis=0)
     if tmp_df.empty:
-        return None, None, None
+        return None, None, None, 0
     order_id = [None] + tmp_df['주문ID'].tolist() # 주문ID order_id
     city_name_list = [terminal_id] + tmp_df['착지ID'].tolist()
     
@@ -42,13 +42,15 @@ def run_ga(terminal_id, day, group, demand_df):
         value = tmp_df['착지ID'].values.tolist()[i]
         index_positions.append(list(pivot_table.index).index(value))
         cbm_list.append(float(tmp_df['CBM'].values[i]))
-
+    # print("tmp_df", tmp_df)
     # 3일간의 하차 가능 시작과 끝 시간 리스트 계산
     landing_start_times = [[0,0,0]]
     landing_start_times.extend(tmp_df['landing_start_times'].tolist())
+    # print("landing_start_times", landing_start_times)
     landing_end_times = [[(4320 - max(0, day - 4) * 1440) for _ in range(3)]]
     landing_end_times.extend(tmp_df['landing_end_times'].tolist())
-
+    # print("landing_end_times", landing_end_times)
+    # print("index_positions", index_positions)
     parameters = pd.DataFrame({
         'arrive_station': index_positions,
         'TW_early':landing_start_times,
@@ -85,10 +87,10 @@ def run_ga(terminal_id, day, group, demand_df):
 
     # Parameters - GA
     penalty_value   = 1000000    # GA Target Function Penalty Value for Violating the Problem Constraints
-    population_size = 10      # GA Population Size
+    population_size = 5      # GA Population Size
     mutation_rate   = 0.2     # GA Mutation Rate
     elite           = 1        # GA Elite Member(s) - Total Number of Best Individual(s) that (is)are Maintained 
-    generations     = 10    # GA Number of Generations
+    generations     = 3    # GA Number of Generations
     
     # Run GA Function
     ga_report, output_report, solution, fleet_used_now = genetic_algorithm_vrp(coordinates, distance_matrix, parameters, velocity, fixed_cost, variable_cost, capacity, real_distance_matrix, population_size, vehicle_types, n_depots, route, model, time_window, fleet_available, mutation_rate, elite, generations, penalty_value, graph, 'rw', fleet_available_no_fixed_cost, order_id = order_id, city_name_list=city_name_list)  
@@ -156,13 +158,17 @@ for day in range(7):
         for terminal_id in terminal_lst:
             print("terminal id:", terminal_id)
             print(f"day {day} group {group}")
-            ga_report, output_report, fleet_used_now = run_ga(terminal_id, day, group, demand_df)
+            ga_report, output_report, fleet_used_now, num_unassigned = run_ga(terminal_id, day, group, demand_df)
             if fleet_used_now:
                 print("사용한 차량 수 :", sum(fleet_used_now))
             print("####################################")
             if ga_report is None:
                 continue
-
+            ga_report['Arrive_Time'] = ga_report['Arrive_Time'].apply(min_to_day)
+            ga_report['Leave_Time'] = ga_report['Leave_Time'].apply(min_to_day)
+            ga_report.to_csv(f'./report/ga_report-day-{day}-group-{group}-{terminal_id}.csv', encoding= 'cp949', index = False)
+            output_report.to_csv(f'./report/output_report-day-{day}-group-{group}-{terminal_id}.csv', encoding= 'cp949', index = False)
+            
             total_cost += float(ga_report['Costs'].tolist()[-1])
             if float(ga_report['Costs'].tolist()[-1]) > 1000000:
                 infeasible_solution.append(f"day-{day}-group-{group}-{terminal_id}")

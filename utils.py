@@ -139,12 +139,16 @@ def vehicle_return_time(clean_report, fleet_used_now, vehicle_types):
 
 def min_to_day(minute):
     #minute으로 받은 거 해당 날짜로 바꿔주는 format
-    minute = int(round(minute, 0))
-    hr = minute // 60
-    minute = str(minute % 60)
-    day = "2023-05-0{}".format(1+hr//24)
-    hr = str(hr % 24)
-    return day+" "+hr.zfill(2)+":"+minute.zfill(2)
+    if minute in ('-//-',''):
+        return minute
+    else:
+        minute = int(round(minute, 0))
+        hr = minute // 60
+        minute = str(minute % 60)
+        day = "2023-05-0{}".format(1+hr//24)
+        hr = str(hr % 24)
+        return day+" "+hr.zfill(2)+":"+minute.zfill(2)
+
 
 # def time_difference(day1, day2):
 #     #year difference는 구현 안해놓음.
@@ -294,8 +298,11 @@ def reallocate_veh(max_car, veh_table, asc_dist_dict, unassigned_orders, termina
                                 break
                             continue
 
-def check_max_car(terminal, max_car, fleet_used_now):
-    max_car[terminal] = max(max_car[terminal], sum(fleet_used_now))
+def check_max_car(terminal, max_car, fleet_used_now, day, num_unassigned):
+    if day == 6 and num_unassigned == 0:
+        max_car[terminal] = 0
+    else:
+        max_car[terminal] = max(max_car[terminal], sum(fleet_used_now))
     return max_car
 
 def set_max_car(terminals):
