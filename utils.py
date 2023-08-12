@@ -139,12 +139,16 @@ def vehicle_return_time(clean_report, fleet_used_now, vehicle_types):
 
 def min_to_day(minute):
     #minute으로 받은 거 해당 날짜로 바꿔주는 format
-    minute = int(round(minute, 0))
-    hr = minute // 60
-    minute = str(minute % 60)
-    day = "2023-05-0{}".format(1+hr//24)
-    hr = str(hr % 24)
-    return day+" "+hr.zfill(2)+":"+minute.zfill(2)
+    if minute in ('-//-',''):
+        return minute
+    else:
+        minute = int(round(minute, 0))
+        hr = minute // 60
+        minute = str(minute % 60)
+        day = "2023-05-0{}".format(1+hr//24)
+        hr = str(hr % 24)
+        return day+" "+hr.zfill(2)+":"+minute.zfill(2)
+
 
 # 시간을 분 단위로 변환하는 함수
 def time_to_minutes(time_str):
@@ -216,14 +220,9 @@ def get_total_dict(veh_table):
         fleet_idx = center_data.index.tolist()
         total_dict[center] = [fleet_available, fleet_available_no_fixed_cost, fleet_idx]
     return total_dict
-# history
-def update_history(day, group, moved_df, veh_ID_list, origin, destination, veh_table, dist):
-    for item in veh_ID_list:
-        row = [veh_table.loc[item, 'VehNum'], origin, destination, day, group, veh_table.loc[item, 'VariableCost'] * dist]
-        moved_df.loc[moved_df.shape[0]] = row
 
 # 현재까지 사용한 차 수, 각 터미널별 현재 차 수(veh_table), 터미널 별 가장 가까운 터미널들, 부족한 차 수(==미처리된 주문수)
-def reallocate_veh(max_car, veh_table, asc_dist_dict, unassigned_orders, terminals, total_dict, day, group, moved_df):
+def reallocate_veh(max_car, veh_table, asc_dist_dict, unassigned_orders, terminals, total_dict):
     # 터미널별 필요 차량 수 확인(==미처리된 주문 수)
     for terminal in terminals:
         if unassigned_orders[terminal]:
@@ -248,7 +247,6 @@ def reallocate_veh(max_car, veh_table, asc_dist_dict, unassigned_orders, termina
                             print("car_idx", car_idx)
                             print("from", arrival_terminal, "to", terminal)
                             print("#########################")
-                            update_history(day, group, moved_df, car_idx, terminal, arrival_terminal, veh_table, dist)
                             # 각 터미널의 차량 증감 처리 + 비용처리도 필요함! -> history를 만드는게 좋을듯
                             for idx in car_idx:
                                 veh_table.loc[total_dict[arrival_terminal][2][idx], 'CurrentCenter'] = terminal
@@ -273,7 +271,6 @@ def reallocate_veh(max_car, veh_table, asc_dist_dict, unassigned_orders, termina
                             print("car_idx", car_idx)
                             print("from", arrival_terminal, "to", terminal)
                             print("#########################")
-                            update_history(day, group, moved_df, car_idx, terminal, arrival_terminal, veh_table, dist)
                             # 각 터미널의 차량 증감 처리 + 비용처리도 필요함! -> history를 만드는게 좋을듯
                             for idx in car_idx:
                                 veh_table.loc[total_dict[arrival_terminal][2][idx], 'CurrentCenter'] = terminal
@@ -289,8 +286,11 @@ def reallocate_veh(max_car, veh_table, asc_dist_dict, unassigned_orders, termina
                                 break
                             continue
 
-def check_max_car(terminal, max_car, fleet_used_now):
-    max_car[terminal] = max(max_car[terminal], sum(fleet_used_now))
+def check_max_car(terminal, max_car, fleet_used_now, day, num_unassigned):
+    if day == 6 and num_unassigned == 0:
+        max_car[terminal] = 0
+    else:
+        max_car[terminal] = max(max_car[terminal], sum(fleet_used_now))
     return max_car
 
 def set_max_car(terminals):

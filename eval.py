@@ -17,16 +17,18 @@ def evaluate_subroute(index_lst,parameters):
 # Function: Subroute Time
 # 각 subroute node마다 waite, arrival, departure 시간 찍어주는 함수
 def evaluate_time(distance_matrix, parameters, depot, subroute, velocity):
-    subroute   = evaluate_subroute(subroute, parameters)
+    subroute_specified_by_order   = evaluate_subroute(subroute, parameters)
     tw_early   = parameters[:, 1]
     tw_late    = parameters[:, 2]
     tw_st      = parameters[:, 3]
     subroute_i = depot + subroute
     subroute_j = subroute + depot
+    subroute_specified_by_order_i = depot + subroute_specified_by_order
+    subroute_specified_by_order_j = subroute_specified_by_order + depot
     wait       = [0]*len(subroute_j)
     time       = [0]*len(subroute_j)
     for i in range(0, len(time)):
-        time[i] = time[i] + distance_matrix[(subroute_i[i], subroute_j[i])]/velocity[0]
+        time[i] = time[i] + distance_matrix[(subroute_specified_by_order_i[i], subroute_specified_by_order_j[i])]/velocity[0]
         if (time[i] < tw_early[subroute_j][i][0]):
             wait[i] = tw_early[subroute_j][i][0] - time[i]
             time[i] = tw_early[subroute_j][i][0]
@@ -54,9 +56,11 @@ def evaluate_time(distance_matrix, parameters, depot, subroute, velocity):
                 
         if (i  < len(time) - 1):
             time[i+1] = time[i]
-
+    
     time[0:0] = [0]
     wait[0:0] = [0]
+    print("time", time)
+    print("------------------------")
     return wait, time, day_num
 
 # Function: Subroute Capacity

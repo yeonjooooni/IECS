@@ -62,7 +62,7 @@ def output_report(solution, distance_matrix, parameters, velocity, fixed_cost, v
             #activity = finish, 우리가 보려고 표시한 return한 차량
         
             report_lst.append([ORD_NO, 'VEH_' + str(vehicle_index[solution[2][i][0]]), j+1, city_name, 
-                               min_to_day(arrive_time+time_absolute), round(wait[j], 2)+time_absolute, round(time[j], 2)+time_absolute if activity != 'start' else 'Null', min_to_day(round(time[j], 2)+time_absolute) if activity == 'service' else 'Null', delivered_status])
+                               min_to_day(arrive_time+time_absolute), round(wait[j], 2), round(time[j], 2) if activity != 'start' else 'Null', min_to_day(round(time[j], 2)+time_absolute) if activity == 'service' else 'Null', delivered_status])
         
         report_lst.append(['-//-', '-//-', '-//-', '-//-', '-//-', '-//-', '-//-', '-//-', '-//-'])
     
@@ -84,7 +84,7 @@ def show_report(solution, distance_matrix,  parameters, velocity, fixed_cost, va
         reversed_sol.reverse()
         cap          = evaluate_capacity(parameters, solution[0][i], reversed_sol) 
         cap.reverse()
-        solution[1][i]  = evaluate_subroute(solution[1][i],parameters)
+        solution[1][i] = evaluate_subroute(solution[1][i],parameters)
         dist         = evaluate_distance(real_distance_matrix, solution[0][i], solution[1][i], parameters)
         wait, time   = evaluate_time(distance_matrix, parameters, solution[0][i], solution[1][i], velocity = [velocity[solution[2][i][0]]])[0:2]
         
@@ -120,9 +120,10 @@ def show_report(solution, distance_matrix,  parameters, velocity, fixed_cost, va
                     tt = time[j]
                 td = td + dist[j]
                 tc = tc + cost[j]
-            report_lst.append(['#' + str(i+1), solution[2][i][0], activity, subroute[0][j], cap[j], leave_cap[j], round(wait[j],2), arrive_time, round(time[j],2), round(dist[j],2), round(cost[j],2) ])
+            report_lst.append(['#' + str(i+1), solution[2][i][0], activity, subroute[0][j], cap[j], leave_cap[j], round(wait[j],2), arrive_time+time_absolute, round(time[j],2)+time_absolute, round(dist[j],2), round(cost[j],2) ])
         report_lst.append(['-//-', '-//-', '-//-', '-//-','-//-', '-//-', '-//-', '-//-', '-//-', '-//-', '-//-'])
     report_lst.append(['MAX TIME', '', '','', '', '', '', '', round(tt,2), '', ''])
     report_lst.append(['TOTAL', '', '','', '', '', '', '', '', round(td,2), round(tc,2)])
     report_df = pd.DataFrame(report_lst, columns = column_names)
     return report_df
+
