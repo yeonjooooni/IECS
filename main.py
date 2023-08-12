@@ -151,6 +151,8 @@ unassigned_orders_forever = {}
 
 total_cost = 0
 unassigned_rows_dict = defaultdict(lambda : None)
+
+moved_df = pd.DataFrame(columns=['Veh_ID', 'Origin', 'Destination', 'day', 'group', 'travel_cost'])
 for day in range(0,7):
     for group in range(4):
         for terminal_id in terminal_lst:
@@ -174,10 +176,11 @@ for day in range(0,7):
 
         total_dict = get_total_dict(veh_table)
         # 미처리 주문에 대한 차량 재배치
-        reallocate_veh(max_car, veh_table, asc_dist_dict, unassigned_orders_count_dict, terminal_lst, total_dict)
+        reallocate_veh(max_car, veh_table, asc_dist_dict, unassigned_orders_count_dict, terminal_lst, total_dict, day, group, moved_df)
         # 시간 6시간 흐름
         veh_table['CenterArriveTime'] = veh_table['CenterArriveTime'].apply(lambda x: max(x - 360, 0))
 
 print("total_cost :", total_cost)
 print("infeasible_solution :", infeasible_solution)
 print("unassigned_orders_forever :", unassigned_orders_forever)
+print("terminal to terminal cost:", sum(moved_df.iloc[:, 'travel_cost']))
