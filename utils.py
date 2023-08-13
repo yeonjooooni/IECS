@@ -94,7 +94,7 @@ def preprocess_demand_df():
     demand_df['landing_end_times'] = landing_end_times 
     return demand_df
 
-def update_landing_available_time_zone(unassigned_rows):
+def update_landing_available_time_zone(df):
     def update_times(row):
         landing_start_times = row['landing_start_times']
         landing_end_times = row['landing_end_times']
@@ -106,7 +106,7 @@ def update_landing_available_time_zone(unassigned_rows):
         row['landing_end_times'] = updated_end_times
         return row
     
-    return unassigned_rows.apply(update_times, axis=1)
+    return df.apply(update_times, axis=1)
 
 def preprocess_coordinates(demand_df, pivot_table, id_list_only_in_tmp_df):
     departure_coordinates = demand_df.drop_duplicates(['착지ID'])[['착지ID', '하차지_위도', '하차지_경도']]

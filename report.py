@@ -21,7 +21,7 @@ def output_report(solution, distance_matrix, parameters, velocity, fixed_cost, v
         reversed_sol.reverse()
         cap          = evaluate_capacity(parameters, solution[0][i], reversed_sol) 
         cap.reverse()
-        solution[1][i]  = evaluate_subroute(solution[1][i],parameters)
+        #solution[1][i]  = evaluate_subroute(solution[1][i],parameters)
         dist = evaluate_distance(distance_matrix, solution[0][i], solution[1][i],parameters)
         wait, time = evaluate_time(distance_matrix, parameters, solution[0][i], solution[1][i], velocity = [velocity[solution[2][i][0]]])[0:2]
 
@@ -84,7 +84,7 @@ def show_report(solution, distance_matrix,  parameters, velocity, fixed_cost, va
         reversed_sol.reverse()
         cap          = evaluate_capacity(parameters, solution[0][i], reversed_sol) 
         cap.reverse()
-        #solution[1][i] = evaluate_subroute(solution[1][i],parameters)
+        solution[1][i] = evaluate_subroute(solution[1][i],parameters)
         dist         = evaluate_distance(real_distance_matrix, solution[0][i], solution[1][i], parameters)
         wait, time   = evaluate_time(distance_matrix, parameters, solution[0][i], solution[1][i], velocity = [velocity[solution[2][i][0]]])[0:2]
         

@@ -193,7 +193,7 @@ def initial_population(parameters, coordinates='none', distance_matrix='none', p
                     break
 
                 d = random.sample(depots, 1)[0]
-                c = random.sample(clients_temp, random.randint(1, min(len(clients_temp), 3))) #차량 최대적재량/최대주문크기
+                c = random.sample(clients_temp, random.randint(1, min(len(clients_temp), 2))) #차량 최대적재량/최대주문크기
                 # 차량 적재량 넘으면 다시 돌리기
                 if sum([parameters[:, 5][int(i)] for i in c]) > capacity[int(e[0])]:
                     continue
@@ -213,7 +213,7 @@ def initial_population(parameters, coordinates='none', distance_matrix='none', p
                 fleet_available_check[e[0]]-=1
 
             if total_demand_unassigned:
-                print(f"처리 못하고 다음으로 넘긴 물량: {total_demand_unassigned}")
+                print(f"처리 못하고 다음으로 넘긴 물량: {len(total_demand_unassigned)}")
             
             non_zero_demand_clients = [client for client in non_zero_demand_clients if client not in total_demand_unassigned]
             first_individual = [routes_depot, routes, routes_vehicles, total_demand_unassigned]
@@ -487,9 +487,7 @@ def genetic_algorithm_vrp(coordinates, distance_matrix, parameters, velocity, fi
     count           = 0
     solution_report = ['None']
     max_capacity    = copy.deepcopy(capacity)
-    print("initial_population 시작")
     population       = initial_population(parameters, coordinates, distance_matrix, population_size = population_size, vehicle_types = vehicle_types, n_depots = n_depots, model = model, capacity = capacity, fleet_available=fleet_available)   
-    print("initial_population 끝")
     cost, population = target_function(population, distance_matrix, parameters, velocity, fixed_cost, variable_cost, max_capacity, penalty_value, time_window = time_window, route = route, fleet_available = fleet_available, real_distance_matrix=real_distance_matrix,fleet_available_no_fixed_cost=fleet_available_no_fixed_cost) 
     cost, population = (list(t) for t in zip(*sorted(zip(cost, population))))
     # 기존 코드, finess_function을 통해 각 경우의 population에 점수 배정
