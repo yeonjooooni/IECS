@@ -77,7 +77,7 @@ def plot_tour_latlong (lat_long, solution, n_depots, route):
           folium.PolyLine(locations , color = c, weight = 1.5, opacity = 1).add_to(m)
     return m
 
-def preprocess_demand_df():
+def preprocess_demand_df(number_of_t):
     demand_df = pd.read_csv('./과제3 실시간 주문 대응 Routing 최적화 (orders_table) 수정완료.csv', encoding='cp949')
     # 3일간의 하차 가능 시작과 끝 시간 리스트 계산
     landing_start_times = []
@@ -87,16 +87,16 @@ def preprocess_demand_df():
         end_time = row['하차가능시간_종료']
         day = int(row['date'][-1])-1
         group = row['Group']
-        start_list, end_list = get_trip_time_lists(start_time, end_time, day, group, num_days=3)
+        start_list, end_list = get_trip_time_lists(start_time, end_time, day, group, num_days=3, number_of_t=number_of_t)
         landing_start_times.append(start_list)
         landing_end_times.append(end_list)
     demand_df['landing_start_times'] = landing_start_times
     demand_df['landing_end_times'] = landing_end_times 
     return demand_df
 
-def update_times(row):
-    row['landing_start_times'] = [max(time - 180, 0) for time in row['landing_start_times']]
-    row['landing_end_times'] = [max(time - 180, 0) for time in row['landing_end_times']]
+def update_times(row, number_of_t):
+    row['landing_start_times'] = [max(time - 360//number_of_t, 0) for time in row['landing_start_times']]
+    row['landing_end_times'] = [max(time - 360//number_of_t, 0) for time in row['landing_end_times']]
     return row
 
 def preprocess_coordinates(demand_df, pivot_table, id_list_only_in_tmp_df):
@@ -148,15 +148,15 @@ def time_to_minutes(time_str):
 
 # 3일간의 하차 가능 시작과 끝 시간 리스트를 구하는 함수
 # 여기서 이미 time_window와 무관하게 3일차(4320분)에 딱 cut하도록 만들어 놓음
-def get_trip_time_lists(start_time, end_time, day, group, num_days=3): #수정필요
+def get_trip_time_lists(start_time, end_time, day, group, num_days=3, number_of_t=3): #수정필요
     start_time_minutes = time_to_minutes(start_time)
     end_time_minutes = time_to_minutes(end_time)
 
     if start_time_minutes > end_time_minutes:
         end_time_minutes += 1440
 
-    start_time_minutes -= 1440 * day  +  180 * group
-    end_time_minutes   -= 1440 * day  +  180 * group
+    start_time_minutes -= 1440 * day  +  360//number_of_t * group
+    end_time_minutes   -= 1440 * day  +  360//number_of_t * group
 
     while start_time_minutes < 0:
         start_time_minutes += 1440
