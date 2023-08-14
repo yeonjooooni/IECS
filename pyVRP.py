@@ -1,6 +1,4 @@
 # Required Libraries
-import folium
-import folium.plugins
 import pandas as pd
 import random
 import numpy as np
@@ -8,12 +6,9 @@ import copy
 import os
 import time as tm
 
-from itertools import cycle
-from matplotlib import pyplot as plt
 from utils import *
 from report import *
 from eval import *
-plt.style.use('bmh')
 
 ############################################################################
 # Function: Routes Best Vehicle
@@ -94,16 +89,6 @@ def target_function(population, distance_matrix, parameters, velocity, fixed_cos
 
     cost_total = copy.deepcopy(cost)
     return cost_total, population
-
-def binary_search(array, target):
-    left, right = 0, len(array)
-    while left < right:
-        mid = (left + right) // 2
-        if array[mid] <= target:
-            left = mid + 1
-        else:
-            right = mid
-    return left
 
 # Function: Initial Population
 # CBM만 넘지 않게 일단일단 차량 배정
@@ -471,10 +456,7 @@ def genetic_algorithm_vrp(coordinates, distance_matrix, parameters, velocity, fi
             solution  = copy.deepcopy(population[0])
             elite_cst = copy.deepcopy(cost[0][0])
         count = count + 1  
-        #print('Generation = ', count, ' Distance = ', elite_ind, ' f(x) = ', round(elite_cst, 2))
-    if (graph == True):
-        plot_tour_coordinates(coordinates, solution, n_depots = n_depots, route = route)
-
+    
     fleet_used_now = [0] * len(fleet_available_no_fixed_cost)
     # 해당 시간대에 사용한 차량
     for sublist in solution[2]:
