@@ -18,12 +18,12 @@ plt.style.use('bmh')
 ############################################################################
 # Function: Routes Best Vehicle
 def evaluate_vehicle(vehicle_types, individual, distance_matrix, parameters, velocity, fixed_cost, variable_cost, capacity, penalty_value, time_window, route,real_distance_matrix, fleet_available, fleet_available_no_fixed_cost = None):
-    cost, _, _     = target_function([individual], distance_matrix, parameters, velocity, fixed_cost, variable_cost, capacity, penalty_value, time_window, route,real_distance_matrix, fleet_available, fleet_available_no_fixed_cost) 
+    cost, _     = target_function([individual], distance_matrix, parameters, velocity, fixed_cost, variable_cost, capacity, penalty_value, time_window, route,real_distance_matrix, fleet_available, fleet_available_no_fixed_cost) 
     individual_ = copy.deepcopy(individual)
     for i in range(0, len(individual[0])):
         for j in range(0, vehicle_types):
             individual_[2][i] = [j]
-            cost_, _, _             = target_function([individual_], distance_matrix, parameters, velocity, fixed_cost, variable_cost, capacity, penalty_value, time_window, route, real_distance_matrix, fleet_available, fleet_available_no_fixed_cost) 
+            cost_, _             = target_function([individual_], distance_matrix, parameters, velocity, fixed_cost, variable_cost, capacity, penalty_value, time_window, route, real_distance_matrix, fleet_available, fleet_available_no_fixed_cost) 
             if (cost_ < cost):
                 cost             = cost_
                 individual[2][i] = [j]     
@@ -44,7 +44,6 @@ def target_function(population, distance_matrix, parameters, velocity, fixed_cos
     else:
         end = 1
 
-    route_time = []
     # k individuals, individual은 각 차들의 route
     # individual[i] = [depot(출발), route(list type), vehicle]
     # 거리*비용 + penalty
@@ -55,7 +54,6 @@ def target_function(population, distance_matrix, parameters, velocity, fixed_cos
         pnlt       = 0
         flt_cnt    = [0]*len(fleet_available)
         no_fixed_cost_count = [0]*len(fleet_available)
-        route_time_individual = []
         while (size > i): # i subroutes 
             dist = evaluate_distance(real_distance_matrix, individual[0][i], individual[1][i], parameters)
             if(time_window == 'with'):
@@ -94,12 +92,8 @@ def target_function(population, distance_matrix, parameters, velocity, fixed_cos
             size       = len(individual[1])
             i          = i + 1
 
-            route_time_individual.append(time[-1])
-
-        route_time.append(route_time_individual)
-
     cost_total = copy.deepcopy(cost)
-    return cost_total, population, route_time
+    return cost_total, population
 
 def binary_search(array, target):
     left, right = 0, len(array)
@@ -142,7 +136,7 @@ def initial_population(parameters, coordinates='none', distance_matrix='none', p
             repeat_count = 0
             while len(clients_temp) > 0:
                 repeat_count += 1
-                if repeat_count >= 10000:
+                if repeat_count >= 1000:
                     if clients_temp:
                         total_demand_unassigned.append(clients_temp.pop())
                         repeat_count = 0
@@ -162,7 +156,7 @@ def initial_population(parameters, coordinates='none', distance_matrix='none', p
                     break
 
                 d = random.sample(depots, 1)[0]
-                c = random.sample(clients_temp, random.randint(1, min(len(clients_temp), 3))) #차량 최대적재량/최대주문크기
+                c = random.sample(clients_temp, random.randint(1, min(len(clients_temp), 2))) #차량 최대적재량/최대주문크기
                 # 차량 적재량 넘으면 다시 돌리기
                 if sum([parameters[:, 5][int(i)] for i in c]) > capacity[int(e[0])]:
                     continue
@@ -202,7 +196,7 @@ def initial_population(parameters, coordinates='none', distance_matrix='none', p
             flag_first_is_best = False
             while len(clients_temp) > 0:
                 repeat_count += 1
-                if repeat_count >= 10000:
+                if repeat_count >= 1000:
                     repeat_count = 0
                     flag_first_is_best = True
                     break
@@ -242,21 +236,20 @@ def initial_population(parameters, coordinates='none', distance_matrix='none', p
                 population.append(first_individual)
             else:
                 population.append([routes_depot, routes, routes_vehicles, total_demand_unassigned])
+
     return population
 
 # Function: Fitness
-def fitness_function(cost, population_size, route_time): 
+def fitness_function(cost, population_size, parameters): 
     fitness = np.zeros((population_size, 2))
     for i in range(0, fitness.shape[0]):
-        fitness[i, 0] = 1 / (1 + cost[i][0] + abs(np.min(cost)))
-        if len(route_time[i]) != 0:
-            fitness[i, 0] *= (sum(1 for time in route_time[i] if time <= 360) / len(route_time[i])) + 0.1
-    fit_sum = fitness[:, 0].sum()
-    fitness[0, 1] = fitness[0, 0]
+        fitness[i,0] = 1/(1 + cost[i][0] + abs(np.min(cost)))
+    fit_sum      = fitness[:,0].sum()
+    fitness[0,1] = fitness[0,0]
     for i in range(1, fitness.shape[0]):
-        fitness[i, 1] = (fitness[i, 0] + fitness[i-1, 1])
+        fitness[i,1] = (fitness[i,0] + fitness[i-1,1])
     for i in range(0, fitness.shape[0]):
-        fitness[i, 1] = fitness[i, 1] / fit_sum
+        fitness[i,1] = fitness[i,1]/fit_sum
     return fitness
 
 # Function: Selection
@@ -449,17 +442,14 @@ def genetic_algorithm_vrp(coordinates, distance_matrix, parameters, velocity, fi
     solution_report = ['None']
     max_capacity    = copy.deepcopy(capacity)
     population       = initial_population(parameters, coordinates, distance_matrix, population_size = population_size, vehicle_types = vehicle_types, n_depots = n_depots, model = model, capacity = capacity, fleet_available=fleet_available)   
-    cost, population, route_time = target_function(population, distance_matrix, parameters, velocity, fixed_cost, variable_cost, max_capacity, penalty_value, time_window = time_window, route = route, fleet_available = fleet_available, real_distance_matrix=real_distance_matrix,fleet_available_no_fixed_cost=fleet_available_no_fixed_cost) 
+    cost, population = target_function(population, distance_matrix, parameters, velocity, fixed_cost, variable_cost, max_capacity, penalty_value, time_window = time_window, route = route, fleet_available = fleet_available, real_distance_matrix=real_distance_matrix,fleet_available_no_fixed_cost=fleet_available_no_fixed_cost) 
     cost, population = (list(t) for t in zip(*sorted(zip(cost, population))))
     # 기존 코드, finess_function을 통해 각 경우의 population에 점수 배정
     if (selection == 'rw'):
-        #print("cost", cost)
-        #print("route_time", route_time)
-        fitness          = fitness_function(cost, population_size, route_time)
-        #print("fitness", fitness)
+        fitness          = fitness_function(cost, population_size, parameters)
     else: #elif (selection == 'rb'):
         rank             = [[i] for i in range(1, len(cost)+1)]
-        fitness          = fitness_function(rank, population_size, route_time)
+        fitness          = fitness_function(rank, population_size, parameters)
     elite_ind        = elite_distance(population[0], real_distance_matrix, route = route, parameters=parameters)
     cost             = copy.deepcopy(cost)
     elite_cst        = copy.deepcopy(cost[0][0])
@@ -468,14 +458,14 @@ def genetic_algorithm_vrp(coordinates, distance_matrix, parameters, velocity, fi
     while (count <= generations-1):
         offspring        = breeding(cost, population, fitness, distance_matrix, n_depots, elite, velocity, max_capacity, fixed_cost, variable_cost, penalty_value, time_window, parameters, route, vehicle_types, fleet_available,real_distance_matrix, fleet_available_no_fixed_cost=fleet_available_no_fixed_cost)          
         offspring        = mutation(offspring, mutation_rate = mutation_rate, elite = elite)
-        cost, population, route_time = target_function(offspring, distance_matrix, parameters, velocity, fixed_cost, variable_cost, max_capacity, penalty_value, time_window = time_window, route = route, fleet_available = fleet_available,real_distance_matrix=real_distance_matrix, fleet_available_no_fixed_cost=fleet_available_no_fixed_cost)
+        cost, population = target_function(offspring, distance_matrix, parameters, velocity, fixed_cost, variable_cost, max_capacity, penalty_value, time_window = time_window, route = route, fleet_available = fleet_available,real_distance_matrix=real_distance_matrix, fleet_available_no_fixed_cost=fleet_available_no_fixed_cost)
         cost, population = (list(t) for t in zip(*sorted(zip(cost, population))))
         elite_child      = elite_distance(population[0], real_distance_matrix, route = route, parameters=parameters)    #elite는 그대로
         if (selection == 'rw'):
-            fitness = fitness_function(cost, population_size, route_time)
+            fitness = fitness_function(cost, population_size, parameters)
         elif (selection == 'rb'):
             rank    = [[i] for i in range(1, len(cost)+1)]
-            fitness = fitness_function(rank, population_size, route_time)
+            fitness = fitness_function(rank, population_size, parameters)
         if(elite_ind > elite_child):    #cost가 제일 낮은 한 개는 각 iter마다 일단 뽑아둠
             elite_ind = elite_child 
             solution  = copy.deepcopy(population[0])

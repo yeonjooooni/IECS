@@ -77,7 +77,7 @@ def plot_tour_latlong (lat_long, solution, n_depots, route):
           folium.PolyLine(locations , color = c, weight = 1.5, opacity = 1).add_to(m)
     return m
 
-def preprocess_demand_df():
+def preprocess_demand_df(number_of_t):
     demand_df = pd.read_csv('./과제3 실시간 주문 대응 Routing 최적화 (orders_table) 수정완료.csv', encoding='cp949')
     # 3일간의 하차 가능 시작과 끝 시간 리스트 계산
     landing_start_times = []
@@ -87,16 +87,16 @@ def preprocess_demand_df():
         end_time = row['하차가능시간_종료']
         day = int(row['date'][-1])-1
         group = row['Group']
-        start_list, end_list = get_trip_time_lists(start_time, end_time, day, group, num_days=3)
+        start_list, end_list = get_trip_time_lists(start_time, end_time, day, group, num_days=3, number_of_t=number_of_t)
         landing_start_times.append(start_list)
         landing_end_times.append(end_list)
     demand_df['landing_start_times'] = landing_start_times
     demand_df['landing_end_times'] = landing_end_times 
     return demand_df
 
-def update_times(row):
-    row['landing_start_times'] = [max(time - 360, 0) for time in row['landing_start_times']]
-    row['landing_end_times'] = [max(time - 360, 0) for time in row['landing_end_times']]
+def update_times(row, number_of_t):
+    row['landing_start_times'] = [max(time - 360//number_of_t, 0) for time in row['landing_start_times']]
+    row['landing_end_times'] = [max(time - 360//number_of_t, 0) for time in row['landing_end_times']]
     return row
 
 def preprocess_coordinates(demand_df, pivot_table, id_list_only_in_tmp_df):
@@ -148,15 +148,15 @@ def time_to_minutes(time_str):
 
 # 3일간의 하차 가능 시작과 끝 시간 리스트를 구하는 함수
 # 여기서 이미 time_window와 무관하게 3일차(4320분)에 딱 cut하도록 만들어 놓음
-def get_trip_time_lists(start_time, end_time, day, group, num_days=3): #수정필요
+def get_trip_time_lists(start_time, end_time, day, group, num_days=3, number_of_t=3): #수정필요
     start_time_minutes = time_to_minutes(start_time)
     end_time_minutes = time_to_minutes(end_time)
 
     if start_time_minutes > end_time_minutes:
         end_time_minutes += 1440
 
-    start_time_minutes -= 1440 * day  +  360 * group
-    end_time_minutes   -= 1440 * day  +  360 * group
+    start_time_minutes -= 1440 * day  +  360//number_of_t * group
+    end_time_minutes   -= 1440 * day  +  360//number_of_t * group
 
     while start_time_minutes < 0:
         start_time_minutes += 1440
@@ -215,19 +215,14 @@ def get_total_dict(veh_table):
 # history
 def update_history(day, group, moved_df, veh_ID_list, origin, destination, veh_table, dist):
     for item in veh_ID_list:
-        #row = [veh_table.loc[item, 'VehNum'], origin, destination, day, group, veh_table.loc[item, 'VariableCost'] * dist]
         row = [veh_table.loc[item, 'VehNum'], origin, destination, day, group, veh_table.loc[item,'FixedCost'] *(1 - veh_table.loc[item, 'IsUsed']) + veh_table.loc[item, 'VariableCost'] * dist]
         moved_df.loc[moved_df.shape[0]] = row
-
 
 # 현재까지 사용한 차 수, 각 터미널별 현재 차 수(veh_table), 터미널 별 가장 가까운 터미널들, 부족한 차 수(==미처리된 주문수)
 def reallocate_veh(max_car, veh_table, asc_dist_dict, unassigned_orders, terminals, day, group, moved_df):
     # 터미널별 필요 차량 수 확인(==미처리된 주문 수)
     for terminal in terminals:
-        total_dict = get_total_dict(veh_table)
-        
-        # 미처리 주문이 있는 터미널 and 소속 차량 수 * 1.5 < 미처리 주문
-        if unassigned_orders[terminal] and len(total_dict[terminal][0])*1.5 < unassigned_orders[terminal]: 
+        if unassigned_orders[terminal]:
             car_taken = 0
             # 가까운 터미널 부터 돌면서 가져올 수 있는 차량의 수 확인
             for dist, time, arrival_terminal in asc_dist_dict[terminal]:
