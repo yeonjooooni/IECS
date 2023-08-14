@@ -1,0 +1,5 @@
+ORD_NO,VehicleID,Sequence,SiteCode,ArrivalTime,WaitingTime,ServiceTime,DepartureTime,Delivered
+,VEH_445,1,O_243,2023-05-01 10:00,0,,,
+20230501B468020_001,VEH_445,2,D_115,2023-05-01 11:48,131.67,60,2023-05-01 15:00,Yes
+,VEH_445,3,O_243,2023-05-01 16:51,0,60,,temp
+-//-,-//-,-//-,-//-,-//-,-//-,-//-,-//-,-//-

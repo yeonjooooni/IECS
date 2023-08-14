@@ -190,10 +190,10 @@ output_column_names = ['ORD_NO', 'VehicleID', 'Sequence', 'SiteCode', 'ArrivalTi
 total_output_report = pd.DataFrame([], columns=output_column_names)
 
 moved_df = pd.DataFrame(columns=['Veh_ID', 'Origin', 'Destination', 'day', 'group', 'travel_cost'])
-for day in range(0,7): #(0,7)
-    for group in range(number_of_t*4): #(4)
+for day in range(0,7): 
+    for group in range(number_of_t*4): 
         tot_veh_num = 0
-        for terminal_id in terminal_lst:
+        for terminal_id in terminal_lst[:1]:
             print("terminal id:", terminal_id)
             print(f"day {day} group {group}")
             ga_report, output_report_, fleet_used_now, num_unassigned = run_ga(terminal_id, day, group, demand_df)
