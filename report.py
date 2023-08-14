@@ -1,14 +1,10 @@
-import folium
-import folium.plugins
 import pandas as pd
 import numpy as np
 import copy
 import os
-
-from itertools import cycle
-from matplotlib import pyplot as plt
 from eval import *
 from utils import *
+
 def output_report(solution, distance_matrix, parameters, velocity, fixed_cost, variable_cost, route, time_window, time_absolute, order_id, city_name_list, vehicle_index):
     column_names = ['ORD_NO', 'VehicleID', 'Sequence', 'SiteCode', 'ArrivalTime', 'WaitingTime', 'ServiceTime', 'DepartureTime', 'Delivered']
     tt = 0
@@ -193,7 +189,7 @@ def vehicle_output_report(output_report):   # this output_report must include te
     report_df = pd.DataFrame(report_lst, columns=column_names)
     return report_df
 
-def get_submission_file_1(df, day, group, number_of_t):
+def get_submission_file_1(df, day, group, number_of_t, FOLDER_PATH):
     df = df[df['ORD_NO'] != '-//-']
     df = df.sort_values(by=['VehicleID', 'ArrivalTime'])
     df = df.reset_index(drop=True)
@@ -226,11 +222,11 @@ def get_submission_file_1(df, day, group, number_of_t):
     df.loc[((df['ArrivalTime'].notnull()) & (df['ServiceTime'].isnull())), 'ServiceTime'] = 0
     df.loc[((df['ArrivalTime'].notnull()) & (df['DepartureTime'].isnull())), 'DepartureTime'] = df['ArrivalTime']
     df.drop(['ArrivalTime_datetime', 'ElapsedMinutes'], axis = 1, inplace=True)
-    df.to_csv(f"./제출파일1_최종/total_output_report_day_{day}_group_{group // number_of_t}.csv", index=False, encoding='cp949')
+    df.to_csv(f"{FOLDER_PATH}/제출파일1_최종/total_output_report_day_{day}_group_{group // number_of_t}.csv", index=False, encoding='cp949')
 
 
-def get_submission_file_1_again():
-    folder_path = './제출파일1_최종'
+def get_submission_file_1_again(FOLDER_PATH):
+    folder_path = f'{FOLDER_PATH}/제출파일1_최종'
     csv_files = [file for file in os.listdir(folder_path) if file.endswith('.csv')]
     for csv_file in csv_files:
         file_path = os.path.join(folder_path, csv_file)

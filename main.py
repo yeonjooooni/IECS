@@ -9,23 +9,6 @@ import copy
 from pyVRP import *
 from utils import *
 
-# distance_matrix랑 pivot_table_filled 만드는 함수 : 코드 완성한 다음에 테스트할때 실행
-#make_matrix_csv()
-
-if not os.path.exists('./report'):
-    os.makedirs('./report')
-if not os.path.exists('./제출파일1'):
-    os.makedirs('./제출파일1')
-if not os.path.exists('./제출파일1_최종'):
-    os.makedirs('./제출파일1_최종')
-if not os.path.exists('./제출파일2_최종'):
-    os.makedirs('./제출파일2_최종')
-
-random.seed(42)
-
-plan_time_hour = 1 # 몇시간 단위로 출발시키고 싶은지
-number_of_t = 6//plan_time_hour
-plan_time = plan_time_hour*60
 def run_ga(terminal_id, day, group, demand_df):
     global unassigned_orders_count_dict, unassigned_rows_dict, veh_table, unassigned_orders_forever, total_ga_report, total_output_report, future_rows_dict
     whole = False
@@ -165,6 +148,28 @@ def run_ga(terminal_id, day, group, demand_df):
 
     return ga_report, output_report, fleet_used_now, len(unassigned_idx)
 
+# distance_matrix랑 pivot_table_filled 만드는 함수 : 코드 완성한 다음에 테스트할때 실행
+#make_matrix_csv()
+
+# 제출 파일 폴더들 저장될 위치
+FOLDER_PATH = './결과'
+if not os.path.exists(FOLDER_PATH):
+    os.makedirs(FOLDER_PATH)
+if not os.path.exists(f'{FOLDER_PATH}/report'):
+    os.makedirs(f'{FOLDER_PATH}/report')
+if not os.path.exists(f'{FOLDER_PATH}/제출파일1'):
+    os.makedirs(f'{FOLDER_PATH}/제출파일1')
+if not os.path.exists(f'{FOLDER_PATH}/제출파일1_최종'):
+    os.makedirs(f'{FOLDER_PATH}/제출파일1_최종')
+if not os.path.exists(f'{FOLDER_PATH}/제출파일2_최종'):
+    os.makedirs(f'{FOLDER_PATH}/제출파일2_최종')
+
+random.seed(42)
+
+plan_time_hour = 1 # 몇시간 단위로 출발시키고 싶은지
+number_of_t = 6//plan_time_hour
+plan_time = plan_time_hour*60
+
 terminal_table = pd.read_csv('./과제3 실시간 주문 대응 Routing 최적화 (Terminals).csv', encoding='cp949')
 terminal_lst = terminal_table['ID'].unique()
 
@@ -177,7 +182,6 @@ veh_table['CurrentCenter'] = veh_table['StartCenter']
 veh_table['CenterArriveTime'] = 0
 veh_table['IsUsed'] = 0
 
-# time_matrix, distance_matrix 만드는 코드 추가 필요
 dist_matrix = pd.read_csv("./distance_matrix.csv", index_col=0)
 time_matrix = pd.read_csv("./pivot_table_filled.csv", index_col=0)
 
@@ -204,7 +208,7 @@ moved_df = pd.DataFrame(columns=['Veh_ID', 'Origin', 'Destination', 'day', 'grou
 for day in range(0,7): 
     for group in range(number_of_t*4): 
         tot_veh_num = 0
-        for terminal_id in terminal_lst[:1]:
+        for terminal_id in terminal_lst:
             print("terminal id:", terminal_id)
             print(f"day {day} group {group}")
             ga_report, output_report_, fleet_used_now, num_unassigned = run_ga(terminal_id, day, group, demand_df)
@@ -233,15 +237,15 @@ for day in range(0,7):
         # 시간 6시간 흐름
         veh_table['CenterArriveTime'] = veh_table['CenterArriveTime'].apply(lambda x: max(x - plan_time, 0))
 
-        total_output_report.to_csv(f"./제출파일1/total_output_report_day_{day}_group_{group}.csv", index=False, encoding='cp949')
+        total_output_report.to_csv(f"{FOLDER_PATH}/제출파일1/total_output_report_day_{day}_group_{group}.csv", index=False, encoding='cp949')
         if group % number_of_t == 0:
-            get_submission_file_1(total_output_report, day, group, number_of_t)
+            get_submission_file_1(total_output_report, day, group, number_of_t, FOLDER_PATH)
 
 total_vehicle_report = vehicle_output_report(total_output_report)
-total_vehicle_report.to_csv(f"./제출파일2_최종/total_vehicle.csv", index=False, encoding='cp949')
+total_vehicle_report.to_csv(f"{FOLDER_PATH}/제출파일2_최종/total_vehicle.csv", index=False, encoding='cp949')
 print("total_cost :", total_cost)
 print("infeasible_solution :", infeasible_solution)
 print("unassigned_orders_forever :", unassigned_orders_forever)
 print("terminal to terminal cost:", moved_df['travel_cost'].sum())
  
-get_submission_file_1_again()
+get_submission_file_1_again(FOLDER_PATH)
