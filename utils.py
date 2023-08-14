@@ -121,7 +121,7 @@ def get_checked_fleet_cnt(vehicles_within_intervals):
 
 def vehicle_return_time(clean_report, vehicle_types, veh_table, vehicle_index, time_absolute):
     return_time = [veh_table.iloc[vehicle_index[i]]['CenterArriveTime'] for i in range(vehicle_types)]
-    for route, group in clean_report.groupby(['Route']):
+    for route, group in clean_report.groupby('Route'):
         last_row = group.iloc[-1]
         for idx, i in enumerate(vehicle_index):
             if i == int(last_row['Vehicle'].split("_")[1])-2:
