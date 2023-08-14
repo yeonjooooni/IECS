@@ -1,6 +1,0 @@
-ORD_NO,VehicleID,Sequence,SiteCode,ArrivalTime,WaitingTime,ServiceTime,DepartureTime,Delivered
-,VEH_638,1,O_349,2023-05-01 08:00,0,,,
-M18385561,VEH_638,2,D_313,2023-05-01 10:51,128.56,60,2023-05-01 14:00,Yes
-M18386689,VEH_638,3,D_295,2023-05-01 16:41,0,60,2023-05-01 17:41,Yes
-,VEH_638,4,O_349,2023-05-01 18:31,0,60,,temp
--//-,-//-,-//-,-//-,-//-,-//-,-//-,-//-,-//-
