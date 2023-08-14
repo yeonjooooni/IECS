@@ -25,8 +25,10 @@ def run_ga(terminal_id, day, group, demand_df):
                          ~(tmp_df['landing_start_times'].apply(lambda x: any(v < 360 for v in x)))]  # landing_start_times의 값 중 360 미만인 값이 없는 행 
 
     if not future_rows.empty:
-        future_rows = update_landing_available_time_zone(df = future_rows)
+        #print("이전_future_rows_landing_start_times", future_rows['landing_start_times'].values.tolist())
+        future_rows = future_rows.apply(update_times, axis=1)
         print("하차가능시작시간이 6시간 이후인 주문 수", len(future_rows))
+        #print("이후_future_rows_landing_start_times", future_rows['landing_start_times'].values.tolist())
         future_rows_dict.update({terminal_id: future_rows})
         tmp_df = tmp_df.drop(future_rows.index)
     else:
@@ -54,14 +56,14 @@ def run_ga(terminal_id, day, group, demand_df):
         value = tmp_df['착지ID'].values.tolist()[i]
         index_positions.append(list(pivot_table.index).index(value))
         cbm_list.append(float(tmp_df['CBM'].values[i]))
-    # print("tmp_df", tmp_df)
+    #print("tmp_df", tmp_df['하차가능시간_시작'].values.tolist())
     # 3일간의 하차 가능 시작과 끝 시간 리스트 계산
     landing_start_times = [[0,0,0]]
     landing_start_times.extend(tmp_df['landing_start_times'].tolist())
-    # print("landing_start_times", landing_start_times)
+    #print("landing_start_times", landing_start_times)
     landing_end_times = [[(4320 - max(0, day - 4) * 1440) for _ in range(3)]]
     landing_end_times.extend(tmp_df['landing_end_times'].tolist())
-    # print("landing_end_times", landing_end_times)
+    #print("landing_end_times", landing_end_times)
     # print("index_positions", index_positions)
     parameters = pd.DataFrame({
         'arrive_station': index_positions,
@@ -111,7 +113,7 @@ def run_ga(terminal_id, day, group, demand_df):
     
     # 사용한 차량의 복귀 시간대 파악
     clean_report = ga_report[ga_report['Route'].str.startswith('#')]
-    return_time = vehicle_return_time(clean_report, vehicle_types, veh_table, vehicle_index)
+    return_time = vehicle_return_time(clean_report, vehicle_types, veh_table, vehicle_index, time_absolute = 1440 * day  +  360 * group)
     update_veh_table(veh_table, vehicle_index, return_time, vehicle_types, terminal_id)
     #print("CenterArriveTime", veh_table['CenterArriveTime'].values.tolist())
 
@@ -124,7 +126,9 @@ def run_ga(terminal_id, day, group, demand_df):
 
     if not unassigned_rows.empty:
         # 넘기기 전에 하차가능시간 조정
-        unassigned_rows = update_landing_available_time_zone(df = unassigned_rows)
+        #print("이전_unassigned_rows_landing_start_times", unassigned_rows['landing_start_times'].values.tolist())
+        unassigned_rows = unassigned_rows.apply(update_times, axis=1)
+        #print("이후_unassigned_rows_landing_start_times", unassigned_rows['landing_start_times'].values.tolist())
         unassigned_rows_dict.update({terminal_id: unassigned_rows})
         if day == 6 and group == 3:
             unassigned_orders_forever.update({terminal_id: len(unassigned_rows)})
@@ -175,7 +179,7 @@ for day in range(0,7): #(0,7)
         for terminal_id in terminal_lst:
             print("terminal id:", terminal_id)
             print(f"day {day} group {group}")
-            ga_report, output_report, fleet_used_now, num_unassigned = run_ga(terminal_id, day, group, demand_df)
+            ga_report, output_report_, fleet_used_now, num_unassigned = run_ga(terminal_id, day, group, demand_df)
             if fleet_used_now:
                 print("사용한 차량 수 :", sum(fleet_used_now))
             print("####################################")
@@ -184,10 +188,10 @@ for day in range(0,7): #(0,7)
             ga_report['Arrive_Time'] = ga_report['Arrive_Time'].apply(min_to_day)
             ga_report['Leave_Time']  = ga_report['Leave_Time'].apply(min_to_day)
             ga_report.to_csv(f'./report/ga_report-day-{day}-group-{group}-{terminal_id}.csv', encoding= 'cp949', index = False)
-            output_report.to_csv(f'./report/output_report-day-{day}-group-{group}-{terminal_id}.csv', encoding= 'cp949', index = False)
+            output_report_.to_csv(f'./report/output_report-day-{day}-group-{group}-{terminal_id}.csv', encoding= 'cp949', index = False)
 
             total_ga_report = pd.concat([total_ga_report, ga_report])
-            total_output_report = pd.concat([total_output_report, output_report])    
+            total_output_report = pd.concat([total_output_report, output_report_])    
 
             total_cost += float(ga_report['Costs'].tolist()[-1])
             if float(ga_report['Costs'].tolist()[-1]) > 1000000:
@@ -200,24 +204,24 @@ for day in range(0,7): #(0,7)
         # 시간 6시간 흐름
         veh_table['CenterArriveTime'] = veh_table['CenterArriveTime'].apply(lambda x: max(x - 360, 0))
 
-
         # total_output_report = total_output_report[total_output_report['ORD_NO'] != "-//-"]
         # total_output_report = total_output_report.sort_values(['VehicleID', 'ArrivalTime'])
         # grouped = total_output_report.groupby('VehicleID')
         # for group_name, group_data in grouped:
         #     total_output_report.loc[group_data.index, 'Sequence'] = range(1, len(group_data) + 1)
-        total_output_report.to_csv(f"./제출파일1/total_output_report_day_{day+1}_group_{group+1}.csv", index=False, encoding='cp949')
-
-        tot_dict = get_total_dict(veh_table)
-        ans = 0
-        for key, val in tot_dict.items():
-            ans += len(val[0])
-        print("전체 차량 대수 : ", ans)
+        total_output_report.to_csv(f"./제출파일1/total_output_report_day_{day}_group_{group}.csv", index=False, encoding='cp949')
 
 
 print("total_cost :", total_cost)
 print("infeasible_solution :", infeasible_solution)
 print("unassigned_orders_forever :", unassigned_orders_forever)
+later_jobs = {}
+for key, val in future_rows_dict.items():
+    try:
+        later_jobs[key] = len(val)
+    except:
+        later_jobs[key] = 0
+print("later_jobs", later_jobs)
 print("terminal to terminal cost:", moved_df['travel_cost'].sum())
 
 for terminal_id, df in unassigned_rows_dict.items():
