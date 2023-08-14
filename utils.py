@@ -94,19 +94,10 @@ def preprocess_demand_df():
     demand_df['landing_end_times'] = landing_end_times 
     return demand_df
 
-def update_landing_available_time_zone(df):
-    def update_times(row):
-        landing_start_times = row['landing_start_times']
-        landing_end_times = row['landing_end_times']
-        
-        updated_start_times = [max(time - 360, 0) for time in landing_start_times]
-        updated_end_times = [max(time - 360, 0) for time in landing_end_times]
-        
-        row['landing_start_times'] = updated_start_times
-        row['landing_end_times'] = updated_end_times
-        return row
-    
-    return df.apply(update_times, axis=1)
+def update_times(row):
+    row['landing_start_times'] = [max(time - 360, 0) for time in row['landing_start_times']]
+    row['landing_end_times'] = [max(time - 360, 0) for time in row['landing_end_times']]
+    return row
 
 def preprocess_coordinates(demand_df, pivot_table, id_list_only_in_tmp_df):
     departure_coordinates = demand_df.drop_duplicates(['착지ID'])[['착지ID', '하차지_위도', '하차지_경도']]
@@ -127,14 +118,14 @@ def get_checked_fleet_cnt(vehicles_within_intervals):
             checked_fleet_cnt += j
     return checked_fleet_cnt
 
-def vehicle_return_time(clean_report, vehicle_types, veh_table, vehicle_index):
+def vehicle_return_time(clean_report, vehicle_types, veh_table, vehicle_index, time_absolute):
     return_time = [veh_table.iloc[vehicle_index[i]]['CenterArriveTime'] for i in range(vehicle_types)]
     for route, group in clean_report.groupby(['Route']):
         last_row = group.iloc[-1]
         for idx, i in enumerate(vehicle_index):
             if i == int(last_row['Vehicle'].split("_")[1])-2:
-                return_time[idx] = last_row['Arrive_Time']
-
+                return_time[idx] = last_row['Arrive_Time'] - time_absolute
+    #print("return_time", return_time)
     return return_time
 
 def min_to_day(minute):
@@ -175,15 +166,15 @@ def get_trip_time_lists(start_time, end_time, day, group, num_days=3): #수정�
     end_list   = []
 
     for day in range(num_days):
-        if start_time_minutes + day * 24 * 60 > 4320 - max(0, day - 4) * 1440:
-            start_list.append((4320 - max(0, day - 4) * 1440) - 360 * group - 1440 * (day-4) if day>=4 else (4320 - max(0, day - 4) * 1440))
+        if start_time_minutes + day * 24 * 60 > 4320 :
+            start_list.append(4320)
         else:
-            start_list.append((start_time_minutes + day * 24 * 60)- 360 * group - 1440 * (day-4) if day>=4 else (start_time_minutes + day * 24 * 60))
+            start_list.append(start_time_minutes + day * 24 * 60)
 
-        if end_time_minutes + day * 24 * 60 > 4320 - max(0, day - 4) * 1440:
-            end_list.append((4320 - max(0, day - 4) * 1440) - 360 * group - 1440 * (day-4) if day>=4 else (4320 - max(0, day - 4) * 1440))
+        if end_time_minutes + day * 24 * 60 > 4320 :
+            end_list.append(4320)
         else:
-            end_list.append((end_time_minutes + day * 24 * 60)- 360 * group - 1440 * (day-4) if day>=4 else (end_time_minutes + day * 24 * 60))
+            end_list.append(end_time_minutes + day * 24 * 60)
 
     return start_list, end_list
 
