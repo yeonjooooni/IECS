@@ -32,43 +32,6 @@ def evaluate_vehicle(vehicle_types, individual, distance_matrix, parameters, vel
                 individual_      = copy.deepcopy(individual)
     return individual
 
-# Function: Routes Break Capacity
-def cap_break(vehicle_types, individual, parameters, capacity):
-    go_on = True
-    while (go_on):
-        individual_ = copy.deepcopy(individual)
-        solution    = [[], [], []]
-        for i in range(0, len(individual_[0])):
-            cap   = evaluate_capacity(parameters, individual_[0][i], individual_[1][i]) 
-            sep   = [x >  capacity[individual_[2][i][0]] for x in cap[1:-1] ]
-            sep_f = [individual_[1][i][x] for x in range(0, len(individual_[1][i])) if sep[x] == False]
-            sep_t = [individual_[1][i][x] for x in range(0, len(individual_[1][i])) if sep[x] == True ]
-            if (len(sep_t) > 0 and len(sep_f) > 0):
-                solution[0].append(individual_[0][i])
-                solution[0].append(individual_[0][i])
-                solution[1].append(sep_f)
-                solution[1].append(sep_t)
-                solution[2].append(individual_[2][i])
-                solution[2].append(individual_[2][i])
-            if (len(sep_t) > 0 and len(sep_f) == 0):
-                solution[0].append(individual_[0][i])
-                solution[1].append(sep_t)
-                solution[2].append(individual_[2][i])
-            if (len(sep_t) == 0 and len(sep_f) > 0):
-                solution[0].append(individual_[0][i])
-                solution[1].append(sep_f)
-                solution[2].append(individual_[2][i])
-        
-        solution.append([k for k in individual_[3]])
-        individual_ = copy.deepcopy(solution)
-        if (individual == individual_):
-            go_on      = False
-        else:
-            go_on      = True
-            individual = copy.deepcopy(solution)
-    #print("cap_break", individual)
-    return individual
-
 # Function: Route Evalution & Correction
 # 각 population의 cost만 계산
 def target_function(population, distance_matrix, parameters, velocity, fixed_cost, variable_cost, capacity, penalty_value, time_window, route, real_distance_matrix, fleet_available = [], fleet_available_no_fixed_cost=None):
@@ -392,15 +355,6 @@ def breeding(cost, population, fitness, distance_matrix, n_depots, elite, veloci
             elif (rand <= 0.5): 
                 offspring[i] = crossover_vrp_brbax(parent_2, parent_1)
                 offspring[i] = crossover_vrp_bcr(offspring[i], parent_1, distance_matrix, velocity, capacity, fixed_cost, variable_cost, penalty_value, time_window = time_window, parameters = parameters, route = route, real_distance_matrix=real_distance_matrix)
-        glb_fleet_available_no_fixed_cost = [0]*len(fleet_available)
-        # if (n_depots > 1):
-        #     offspring[i] = evaluate_depot(n_depots, offspring[i], distance_matrix) 
-        # if (vehicle_types > 1):
-        #     offspring[i] = evaluate_vehicle(vehicle_types, offspring[i], distance_matrix, parameters, velocity, fixed_cost, variable_cost, capacity, penalty_value, time_window, route,real_distance_matrix, fleet_available, fleet_available_no_fixed_cost=fleet_available_no_fixed_cost)
-        #offspring[i] = cap_break(vehicle_types, offspring[i], parameters, capacity)
-
-        # if check_individual_capacity(offspring[i], parameters, capacity):
-        #     flag = False
 
     return offspring
 
@@ -501,7 +455,6 @@ def genetic_algorithm_vrp(coordinates, distance_matrix, parameters, velocity, fi
     elite_cst        = copy.deepcopy(cost[0][0])
     solution         = copy.deepcopy(population[0])
 
-    #print('Generation = ', count, ' Distance = ', elite_ind, ' f(x) = ', round(elite_cst, 2)) 
     while (count <= generations-1):
         offspring        = breeding(cost, population, fitness, distance_matrix, n_depots, elite, velocity, max_capacity, fixed_cost, variable_cost, penalty_value, time_window, parameters, route, vehicle_types, fleet_available,real_distance_matrix, fleet_available_no_fixed_cost=fleet_available_no_fixed_cost)          
         offspring        = mutation(offspring, mutation_rate = mutation_rate, elite = elite)

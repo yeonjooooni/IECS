@@ -7,6 +7,7 @@ from itertools import cycle
 from matplotlib import pyplot as plt
 
 import random
+from tqdm.auto import tqdm
 from collections import defaultdict
 
 # Function: Tour Plot
@@ -253,12 +254,6 @@ def reallocate_veh(max_car, veh_table, asc_dist_dict, unassigned_orders, termina
                                 veh_table.loc[idx, 'CenterArriveTime'] = time
                                 veh_table.loc[idx, 'IsUsed'] = 1 # 일단 사용한거로 처리. 고정비 + 가변비로 비교..?
 
-                            # # total_dict update
-                            # for i in range(3):
-                            #     for j in car_idx:
-                            #         total_dict[terminal][i].append(total_dict[arrival_terminal][i][j])
-                            #     total_dict[arrival_terminal][i] = [total_dict[arrival_terminal][i][k] for k in range(len(total_dict[arrival_terminal][i])) if k not in car_idx]
-                            #car_taken = unassigned_orders[terminal]
                             break
 
                         else:
@@ -277,11 +272,6 @@ def reallocate_veh(max_car, veh_table, asc_dist_dict, unassigned_orders, termina
                                 veh_table.loc[idx, 'CurrentCenter'] = terminal
                                 veh_table.loc[idx, 'CenterArriveTime'] = time
                                 veh_table.loc[idx, 'IsUsed'] = 1
-                            # # total_dict update
-                            # for i in range(3):
-                            #     for j in car_idx:
-                            #         total_dict[terminal][i].append(total_dict[arrival_terminal][i][j])
-                            #     total_dict[arrival_terminal][i] = [total_dict[arrival_terminal][i][k] for k in range(len(total_dict[arrival_terminal][i])) if k not in car_idx]
                             car_taken += cur_car_taken
                             if car_taken == unassigned_orders[terminal]:
                                 break
@@ -299,3 +289,18 @@ def set_max_car(terminals):
     for terminal in terminals:
         max_car.update({terminal:5})
     return max_car
+
+# distance_matrix.csv 와 pivot_table_filled.csv를 만드는 함수
+def make_matrix_csv():
+    od_df = pd.read_csv('./과제3 실시간 주문 대응 Routing 최적화 (od_matrix) 수정완료.csv')
+    unique_destinations = od_df['Destination'].unique()
+
+    matrix = pd.DataFrame(columns = unique_destinations, index = unique_destinations)
+    for index, row in tqdm(od_df.iterrows(), total = od_df.shape[0]):
+        matrix.loc[row['origin'], row['Destination']] = row['Time_minute']
+    matrix.to_csv("./pivot_table_filled.csv")
+
+    matrix = pd.DataFrame(columns = unique_destinations, index = unique_destinations)
+    for index, row in tqdm(od_df.iterrows(), total = od_df.shape[0]):
+        matrix.loc[row['origin'], row['Destination']] = row['Distance_km']
+    matrix.to_csv("./distance_matrix.csv")

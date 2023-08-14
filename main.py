@@ -104,7 +104,6 @@ def run_ga(terminal_id, day, group, demand_df):
 
     total_dict = get_total_dict(veh_table)
 
-    #("total_dict_idx", total_dict[terminal_id][2])
     tmp_veh = veh_table[veh_table['CurrentCenter'] == terminal_id]
     vehicle_index       = tmp_veh.index.to_list()
     #print("vehicle_index", vehicle_index)
@@ -151,6 +150,9 @@ def run_ga(terminal_id, day, group, demand_df):
         unassigned_rows_dict.update({terminal_id: None})
 
     return ga_report, output_report, fleet_used_now, len(unassigned_idx)
+
+# distance_matrix랑 pivot_table_filled 만드는 함수 : 코드 완성한 다음에 테스트할때 실행
+#make_matrix_csv()
 
 terminal_table = pd.read_csv('./과제3 실시간 주문 대응 Routing 최적화 (Terminals).csv', encoding='cp949')
 terminal_lst = terminal_table['ID'].unique()
@@ -224,6 +226,8 @@ for day in range(0,7): #(0,7)
         if group % number_of_t == 0:
             get_submission_file_1(total_output_report, day, group, number_of_t)
 
+total_vehicle_report = vehicle_output_report(total_output_report)
+total_vehicle_report.to_csv(f"./제출파일2_최종/total_vehicle.csv", index=False, encoding='cp949')
 print("total_cost :", total_cost)
 print("infeasible_solution :", infeasible_solution)
 print("unassigned_orders_forever :", unassigned_orders_forever)
