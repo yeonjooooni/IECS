@@ -206,7 +206,6 @@ for day in range(0,7): #(0,7)
 
             total_ga_report = pd.concat([total_ga_report, ga_report])
             total_output_report = pd.concat([total_output_report, output_report_])    
-            total_vehicle_report = vehicle_output_report(total_output_report)
 
             total_cost += float(ga_report['Costs'].tolist()[-1])
             if float(ga_report['Costs'].tolist()[-1]) > 1000000:
@@ -224,6 +223,8 @@ for day in range(0,7): #(0,7)
         if group % number_of_t == 0:
             get_submission_file_1(total_output_report, day, group, number_of_t)
 
+total_vehicle_report = vehicle_output_report(total_output_report)
+total_vehicle_report.to_csv(f"./제출파일2_최종/total_vehicle.csv", index=False, encoding='cp949')
 print("total_cost :", total_cost)
 print("infeasible_solution :", infeasible_solution)
 print("unassigned_orders_forever :", unassigned_orders_forever)

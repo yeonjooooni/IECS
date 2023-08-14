@@ -189,3 +189,49 @@ def vehicle_output_report(output_report):   # this output_report must include te
         report_lst.append([key, vehicle_cnt[key], vehicle_volume[key], vehicle_traveldistance[key], vehicle_worktime[key], vehicle_traveltime[key], vehicle_servicetime[key], vehicle_wait_time[key], totalCost, fixedCost, varCost*total_distance])
     report_df = pd.DataFrame(report_lst, columns=column_names)
     return report_df
+
+def get_submission_file_1(df, day, group, number_of_t):
+    df = df[df['ORD_NO'] != '-//-']
+    df = df.sort_values(by=['VehicleID', 'ArrivalTime'])
+    df = df.reset_index(drop=True)
+
+    groups = df.groupby('VehicleID')
+    for group_name, group_df in groups:
+        temp_rows = group_df[group_df['Delivered'] == 'temp'].index
+        for idx in temp_rows:
+            if group_df.loc[idx, 'Delivered'] == 'temp':
+                start_time = pd.to_datetime(group_df.loc[idx, 'ArrivalTime'])
+                next_idx = idx + 1
+                if next_idx < len(group_df) and pd.notna(group_df.loc[next_idx, 'ArrivalTime']):
+                    end_time = pd.to_datetime(group_df.loc[next_idx, 'ArrivalTime'])
+                    time_difference = (end_time - start_time).total_seconds() / 60
+                    df.loc[next_idx, 'WaitingTime'] = time_difference
+                    df.loc[next_idx, 'ArrivalTime'] = start_time
+                    df.loc[next_idx, 'DepartureTime'] = end_time
+                df.drop(idx, inplace=True)
+    df = df.reset_index(drop=True)
+
+    grouped = df.groupby('VehicleID')
+    for group_name, group_data in grouped:
+        df.loc[group_data.index, 'Sequence'] = range(1, len(group_data) + 1)
+    df = df.reset_index(drop=True)
+    df['ArrivalTime_datetime'] = pd.to_datetime(df['ArrivalTime'])
+    df['ElapsedMinutes'] = (df['ArrivalTime_datetime'] - pd.to_datetime('2023-05-01 00:00')).dt.total_seconds() / 60
+    condition = df['ElapsedMinutes'] >= 1440 * day  +  360//number_of_t * group
+    df.loc[condition, ['ArrivalTime', 'WaitingTime', 'ServiceTime', 'DepartureTime']] = None
+    df.loc[condition & (df['Delivered'] == 'Yes'), 'Delivered'] = 'No'
+    df.loc[((df['ArrivalTime'].notnull()) & (df['ServiceTime'].isnull())), 'ServiceTime'] = 0
+    df.loc[((df['ArrivalTime'].notnull()) & (df['DepartureTime'].isnull())), 'DepartureTime'] = df['ArrivalTime']
+    df.drop(['ArrivalTime_datetime', 'ElapsedMinutes'], axis = 1, inplace=True)
+    df.to_csv(f"./제출파일1_최종/total_output_report_day_{day}_group_{group // number_of_t}.csv", index=False, encoding='cp949')
+
+
+def get_submission_file_1_again():
+    folder_path = './제출파일1_최종'
+    csv_files = [file for file in os.listdir(folder_path) if file.endswith('.csv')]
+    for csv_file in csv_files:
+        file_path = os.path.join(folder_path, csv_file)
+        df = pd.read_csv(file_path, encoding='cp949')
+        df.loc[df['ArrivalTime'].notnull() & df['ServiceTime'].isnull(), 'ServiceTime'] = 0
+        df.loc[df['ArrivalTime'].notnull() & df['DepartureTime'].isnull(), 'DepartureTime'] = df['ArrivalTime']
+        df.to_csv(file_path, index=False, encoding='cp949')
