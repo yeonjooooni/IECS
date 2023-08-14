@@ -147,27 +147,30 @@ def vehicle_output_report(output_report):   # this output_report must include te
 
     # 초기화
     for i in range(len(vehicle_table)):
-        vehicle_cnt[vehicle_table.loc[i]['VehNum']] = 0
-        vehicle_volume[vehicle_table.loc[i]['VehNum']] = 0
-        vehicle_traveldistance[vehicle_table.loc[i]['VehNum']] = 0
-        vehicle_worktime[vehicle_table.loc[i]['VehNum']] = 0 #solution에서 받아오기
-        vehicle_traveltime[vehicle_table.loc[i]['VehNum']] = 0
-        vehicle_servicetime[vehicle_table.loc[i]['VehNum']] = 0
-        vehicle_wait_time[vehicle_table.loc[i]['VehNum']] = 0
-        vehicle_volume[vehicle_table.loc[i]['VehNum']] = 0
+        vehicle_cnt[vehicle_table.iloc[i]['VehNum']] = 0
+        vehicle_volume[vehicle_table.iloc[i]['VehNum']] = 0
+        vehicle_traveldistance[vehicle_table.iloc[i]['VehNum']] = 0
+        vehicle_worktime[vehicle_table.iloc[i]['VehNum']] = 0 #solution에서 받아오기
+        vehicle_traveltime[vehicle_table.iloc[i]['VehNum']] = 0
+        vehicle_servicetime[vehicle_table.iloc[i]['VehNum']] = 0
+        vehicle_wait_time[vehicle_table.iloc[i]['VehNum']] = 0
+        vehicle_volume[vehicle_table.iloc[i]['VehNum']] = 0
 
     for i in range(len(output_report)):
         # 지금 vehicleID 안맞아서 임시로 넣어놓은 if문
-        if output_report.loc[i]['VehicleID'] not in vehicle_cnt.keys():
+        print(output_report.iloc[i]['VehicleID'])
+        if output_report.iloc[i]['VehicleID'] == "-//-":
+            continue    
+        if output_report.iloc[i]['VehicleID'] not in vehicle_cnt.keys():
             print("error VehicleID not in Vehicle table")
             continue
-        if output_report.loc[i]['Delivered'] == 'Yes':
-            vehicle_cnt[output_report.loc[i]['VehicleID']] += 1
-            vehicle_wait_time[output_report.loc[i]['VehicleID']] += float(output_report.loc[i]['WaitingTime']) #waiting time 누적
-            vehicle_volume[output_report.loc[i]['VehicleID']] += float(orders_table[orders_table['주문ID']==output_report.loc[i]["ORD_NO"]]["CBM"].values[0])
-        elif output_report.loc[i]['Delivered'] == "temp":
-            vehicle_worktime[output_report.loc[i]['VehicleID']] += float(output_report.loc[i]['ServiceTime']) - 60
-        elif output_report.loc[i]['Delivered'] == '-//-':
+        if output_report.iloc[i]['Delivered'] == 'Yes':
+            vehicle_cnt[output_report.iloc[i]['VehicleID']] += 1
+            vehicle_wait_time[output_report.iloc[i]['VehicleID']] += float(output_report.iloc[i]['WaitingTime']) #waiting time 누적
+            vehicle_volume[output_report.iloc[i]['VehicleID']] += float(orders_table[orders_table['주문ID']==output_report.iloc[i]["ORD_NO"]]["CBM"].values[0])
+        elif output_report.iloc[i]['Delivered'] == "temp":
+            vehicle_worktime[output_report.iloc[i]['VehicleID']] += float(output_report.iloc[i]['ServiceTime']) - 60
+        elif output_report.iloc[i]['Delivered'] == '-//-':
             continue
     #상차지에서 주문 pickup 아무 조건 없음
 
