@@ -215,14 +215,19 @@ def get_total_dict(veh_table):
 # history
 def update_history(day, group, moved_df, veh_ID_list, origin, destination, veh_table, dist):
     for item in veh_ID_list:
-        row = [veh_table.loc[item, 'VehNum'], origin, destination, day, group, veh_table.loc[item, 'VariableCost'] * dist]
+        #row = [veh_table.loc[item, 'VehNum'], origin, destination, day, group, veh_table.loc[item, 'VariableCost'] * dist]
+        row = [veh_table.loc[item, 'VehNum'], origin, destination, day, group, veh_table.loc[item,'FixedCost'] *(1 - veh_table.loc[item, 'IsUsed']) + veh_table.loc[item, 'VariableCost'] * dist]
         moved_df.loc[moved_df.shape[0]] = row
+
 
 # 현재까지 사용한 차 수, 각 터미널별 현재 차 수(veh_table), 터미널 별 가장 가까운 터미널들, 부족한 차 수(==미처리된 주문수)
 def reallocate_veh(max_car, veh_table, asc_dist_dict, unassigned_orders, terminals, day, group, moved_df):
     # 터미널별 필요 차량 수 확인(==미처리된 주문 수)
     for terminal in terminals:
-        if unassigned_orders[terminal]:
+        total_dict = get_total_dict(veh_table)
+        
+        # 미처리 주문이 있는 터미널 and 소속 차량 수 * 1.5 < 미처리 주문
+        if unassigned_orders[terminal] and len(total_dict[terminal][0])*1.5 < unassigned_orders[terminal]: 
             car_taken = 0
             # 가까운 터미널 부터 돌면서 가져올 수 있는 차량의 수 확인
             for dist, time, arrival_terminal in asc_dist_dict[terminal]:
@@ -291,7 +296,7 @@ def check_max_car(terminal, max_car, fleet_used_now, day, num_unassigned):
     if day == 6 and num_unassigned == 0:
         max_car[terminal] = 0
     else:
-        max_car[terminal] = max(max_car[terminal], sum(fleet_used_now))
+        max_car[terminal] = max(5, sum(fleet_used_now))
     return max_car
 
 def set_max_car(terminals):
