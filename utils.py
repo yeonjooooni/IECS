@@ -94,19 +94,10 @@ def preprocess_demand_df():
     demand_df['landing_end_times'] = landing_end_times 
     return demand_df
 
-def update_landing_available_time_zone(unassigned_rows):
-    def update_times(row):
-        landing_start_times = row['landing_start_times']
-        landing_end_times = row['landing_end_times']
-        
-        updated_start_times = [max(time - 360, 0) for time in landing_start_times]
-        updated_end_times = [max(time - 360, 0) for time in landing_end_times]
-        
-        row['landing_start_times'] = updated_start_times
-        row['landing_end_times'] = updated_end_times
-        return row
-    
-    return unassigned_rows.apply(update_times, axis=1)
+def update_times(row):
+    row['landing_start_times'] = [max(time - 360, 0) for time in row['landing_start_times']]
+    row['landing_end_times'] = [max(time - 360, 0) for time in row['landing_end_times']]
+    return row
 
 def preprocess_coordinates(demand_df, pivot_table, id_list_only_in_tmp_df):
     departure_coordinates = demand_df.drop_duplicates(['착지ID'])[['착지ID', '하차지_위도', '하차지_경도']]
@@ -127,14 +118,14 @@ def get_checked_fleet_cnt(vehicles_within_intervals):
             checked_fleet_cnt += j
     return checked_fleet_cnt
 
-def vehicle_return_time(clean_report, fleet_used_now, vehicle_types):
-    return_time = [0 for _ in range(vehicle_types)]
-
-    for route, group in clean_report.groupby('Route'):
+def vehicle_return_time(clean_report, vehicle_types, veh_table, vehicle_index, time_absolute):
+    return_time = [veh_table.iloc[vehicle_index[i]]['CenterArriveTime'] for i in range(vehicle_types)]
+    for route, group in clean_report.groupby(['Route']):
         last_row = group.iloc[-1]
-        vehicle_type = last_row['Vehicle']
-        return_time[vehicle_type] = last_row['Arrive_Time']
-
+        for idx, i in enumerate(vehicle_index):
+            if i == int(last_row['Vehicle'].split("_")[1])-2:
+                return_time[idx] = last_row['Arrive_Time'] - time_absolute
+    #print("return_time", return_time)
     return return_time
 
 def min_to_day(minute):
@@ -175,15 +166,15 @@ def get_trip_time_lists(start_time, end_time, day, group, num_days=3): #수정�
     end_list   = []
 
     for day in range(num_days):
-        if start_time_minutes + day * 24 * 60 > 4320 - max(0, day - 4) * 1440:
-            start_list.append((4320 - max(0, day - 4) * 1440) - 360 * group - 1440 * (day-4) if day>=4 else (4320 - max(0, day - 4) * 1440))
+        if start_time_minutes + day * 24 * 60 > 4320 :
+            start_list.append(4320)
         else:
-            start_list.append((start_time_minutes + day * 24 * 60)- 360 * group - 1440 * (day-4) if day>=4 else (start_time_minutes + day * 24 * 60))
+            start_list.append(start_time_minutes + day * 24 * 60)
 
-        if end_time_minutes + day * 24 * 60 > 4320 - max(0, day - 4) * 1440:
-            end_list.append((4320 - max(0, day - 4) * 1440) - 360 * group - 1440 * (day-4) if day>=4 else (4320 - max(0, day - 4) * 1440))
+        if end_time_minutes + day * 24 * 60 > 4320 :
+            end_list.append(4320)
         else:
-            end_list.append((end_time_minutes + day * 24 * 60)- 360 * group - 1440 * (day-4) if day>=4 else (end_time_minutes + day * 24 * 60))
+            end_list.append(end_time_minutes + day * 24 * 60)
 
     return start_list, end_list
 
@@ -224,26 +215,33 @@ def get_total_dict(veh_table):
 # history
 def update_history(day, group, moved_df, veh_ID_list, origin, destination, veh_table, dist):
     for item in veh_ID_list:
-        row = [veh_table.loc[item, 'VehNum'], origin, destination, day, group, veh_table.loc[item, 'VariableCost'] * dist]
+        #row = [veh_table.loc[item, 'VehNum'], origin, destination, day, group, veh_table.loc[item, 'VariableCost'] * dist]
+        row = [veh_table.loc[item, 'VehNum'], origin, destination, day, group, veh_table.loc[item,'FixedCost'] *(1 - veh_table.loc[item, 'IsUsed']) + veh_table.loc[item, 'VariableCost'] * dist]
         moved_df.loc[moved_df.shape[0]] = row
 
+
 # 현재까지 사용한 차 수, 각 터미널별 현재 차 수(veh_table), 터미널 별 가장 가까운 터미널들, 부족한 차 수(==미처리된 주문수)
-def reallocate_veh(max_car, veh_table, asc_dist_dict, unassigned_orders, terminals, total_dict, day, group, moved_df):
+def reallocate_veh(max_car, veh_table, asc_dist_dict, unassigned_orders, terminals, day, group, moved_df):
     # 터미널별 필요 차량 수 확인(==미처리된 주문 수)
     for terminal in terminals:
-        if unassigned_orders[terminal]:
+        total_dict = get_total_dict(veh_table)
+        
+        # 미처리 주문이 있는 터미널 and 소속 차량 수 * 1.5 < 미처리 주문
+        if unassigned_orders[terminal] and len(total_dict[terminal][0])*1.5 < unassigned_orders[terminal]: 
             car_taken = 0
             # 가까운 터미널 부터 돌면서 가져올 수 있는 차량의 수 확인
             for dist, time, arrival_terminal in asc_dist_dict[terminal]:
+                total_dict = get_total_dict(veh_table)
+
                 if not unassigned_orders[arrival_terminal]:
-                    available_cars = max(0, len(veh_table[(veh_table["CurrentCenter"] == arrival_terminal) & (veh_table["CenterArriveTime"] == 0)]) - max_car[arrival_terminal])
+                    available_cars = max(0, sum(total_dict[arrival_terminal][0]) - max_car[arrival_terminal])
                     # 가져올 차량이 있는 경우 해당 수가 필요 차량보다 많으면 break, 아니면 더하고 continue
                     if available_cars:
                         # available_cars가 현재 필요한 차량보다 많아서 random하게 뽑는 경우
                         if available_cars>=unassigned_orders[terminal]-car_taken:
                             cur_car_taken = unassigned_orders[terminal]-car_taken
                             # 현재 터미널에 있는 차량들의 idx lst 생성
-                            lst = [i for i in range(len(total_dict[arrival_terminal][0])) if total_dict[arrival_terminal][0][i] != 0]
+                            lst = [total_dict[arrival_terminal][2][i] for i in range(len(total_dict[arrival_terminal][0])) if total_dict[arrival_terminal][0][i] != 0]
                             #car_idx = random.sample(lst, cur_car_taken)
                             if cur_car_taken <= len(lst):
                                 car_idx = random.sample(lst, cur_car_taken)
@@ -256,23 +254,17 @@ def reallocate_veh(max_car, veh_table, asc_dist_dict, unassigned_orders, termina
                             update_history(day, group, moved_df, car_idx, terminal, arrival_terminal, veh_table, dist)
                             # 각 터미널의 차량 증감 처리 + 비용처리도 필요함! -> history를 만드는게 좋을듯
                             for idx in car_idx:
-                                veh_table.loc[total_dict[arrival_terminal][2][idx], 'CurrentCenter'] = terminal
-                                veh_table.loc[total_dict[arrival_terminal][2][idx], 'CenterArriveTime'] = time
-                                veh_table.loc[total_dict[arrival_terminal][2][idx], 'IsUsed'] = 1 # 일단 사용한거로 처리. 고정비 + 가변비로 비교..?
+                                veh_table.loc[idx, 'CurrentCenter'] = terminal
+                                veh_table.loc[idx, 'CenterArriveTime'] = time
+                                veh_table.loc[idx, 'IsUsed'] = 1 # 일단 사용한거로 처리. 고정비 + 가변비로 비교..?
 
-                            # total_dict update
-                            for i in range(3):
-                                for j in car_idx:
-                                    total_dict[terminal][i].append(total_dict[arrival_terminal][i][j])
-                                total_dict[arrival_terminal][i] = [total_dict[arrival_terminal][i][k] for k in range(len(total_dict[arrival_terminal][i])) if k not in car_idx]
-                            #car_taken = unassigned_orders[terminal]
                             break
 
                         else:
                             # available_cars를 모두 가져오는 경우
                             cur_car_taken = available_cars
                             # 모든 차량을 가져오기 때문에 그냥 총 idx lst생성
-                            car_idx = [i for i in range(len(total_dict[arrival_terminal][0])) if total_dict[arrival_terminal][0][i] != 0]
+                            car_idx = [total_dict[arrival_terminal][2][i] for i in range(len(total_dict[arrival_terminal][0])) if total_dict[arrival_terminal][0][i] != 0]
                             car_idx = random.sample(car_idx, available_cars)
                             print("########차량 이동########")
                             print("car_idx", car_idx)
@@ -281,14 +273,9 @@ def reallocate_veh(max_car, veh_table, asc_dist_dict, unassigned_orders, termina
                             update_history(day, group, moved_df, car_idx, terminal, arrival_terminal, veh_table, dist)
                             # 각 터미널의 차량 증감 처리 + 비용처리도 필요함! -> history를 만드는게 좋을듯
                             for idx in car_idx:
-                                veh_table.loc[total_dict[arrival_terminal][2][idx], 'CurrentCenter'] = terminal
-                                veh_table.loc[total_dict[arrival_terminal][2][idx], 'CenterArriveTime'] = time
-                                veh_table.loc[total_dict[arrival_terminal][2][idx], 'IsUsed'] = 1
-                            # total_dict update
-                            for i in range(3):
-                                for j in car_idx:
-                                    total_dict[terminal][i].append(total_dict[arrival_terminal][i][j])
-                                total_dict[arrival_terminal][i] = [total_dict[arrival_terminal][i][k] for k in range(len(total_dict[arrival_terminal][i])) if k not in car_idx]
+                                veh_table.loc[idx, 'CurrentCenter'] = terminal
+                                veh_table.loc[idx, 'CenterArriveTime'] = time
+                                veh_table.loc[idx, 'IsUsed'] = 1
                             car_taken += cur_car_taken
                             if car_taken == unassigned_orders[terminal]:
                                 break
@@ -298,7 +285,7 @@ def check_max_car(terminal, max_car, fleet_used_now, day, num_unassigned):
     if day == 6 and num_unassigned == 0:
         max_car[terminal] = 0
     else:
-        max_car[terminal] = max(max_car[terminal], sum(fleet_used_now))
+        max_car[terminal] = max(5, sum(fleet_used_now))
     return max_car
 
 def set_max_car(terminals):
