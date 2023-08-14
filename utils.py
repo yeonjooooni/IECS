@@ -7,6 +7,7 @@ from itertools import cycle
 from matplotlib import pyplot as plt
 
 import random
+from tqdm.auto import tqdm
 from collections import defaultdict
 
 # Function: Tour Plot
@@ -288,3 +289,18 @@ def set_max_car(terminals):
     for terminal in terminals:
         max_car.update({terminal:5})
     return max_car
+
+# distance_matrix.csv 와 pivot_table_filled.csv를 만드는 함수
+def make_matrix_csv():
+    od_df = pd.read_csv('./과제3 실시간 주문 대응 Routing 최적화 (od_matrix) 수정완료.csv')
+    unique_destinations = od_df['Destination'].unique()
+
+    matrix = pd.DataFrame(columns = unique_destinations, index = unique_destinations)
+    for index, row in tqdm(od_df.iterrows(), total = od_df.shape[0]):
+        matrix.loc[row['origin'], row['Destination']] = row['Time_minute']
+    matrix.to_csv("./pivot_table_filled.csv")
+
+    matrix = pd.DataFrame(columns = unique_destinations, index = unique_destinations)
+    for index, row in tqdm(od_df.iterrows(), total = od_df.shape[0]):
+        matrix.loc[row['origin'], row['Destination']] = row['Distance_km']
+    matrix.to_csv("./distance_matrix.csv")
