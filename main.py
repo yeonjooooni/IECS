@@ -75,8 +75,8 @@ def run_ga(terminal_id, day, group, demand_df):
     graph       = False         # True, False
 
     total_dict = get_total_dict(veh_table)
-    if terminal_id == 'O_144':
-        veh_table[veh_table['CurrentCenter'] == 'O_144'].to_csv(f'O_144_{day}_{group}.csv', index=False, encoding='cp949')
+    # if terminal_id == 'O_144':
+    #     veh_table[veh_table['CurrentCenter'] == 'O_144'].to_csv(f'O_144_{day}_{group}.csv', index=False, encoding='cp949')
     
     #("total_dict_idx", total_dict[terminal_id][2])
     tmp_veh = veh_table[veh_table['CurrentCenter'] == terminal_id]
@@ -174,8 +174,8 @@ for day in range(0,1): #(0,7)
                 continue
             ga_report['Arrive_Time'] = ga_report['Arrive_Time'].apply(min_to_day)
             ga_report['Leave_Time']  = ga_report['Leave_Time'].apply(min_to_day)
-            # ga_report.to_csv(f'./report/ga_report-day-{day}-group-{group}-{terminal_id}.csv', encoding= 'cp949', index = False)
-            # output_report.to_csv(f'./report/output_report-day-{day}-group-{group}-{terminal_id}.csv', encoding= 'cp949', index = False)
+            ga_report.to_csv(f'./test/ga_report-day-{day}-group-{group}-{terminal_id}.csv', encoding= 'cp949', index = False)
+            output_report.to_csv(f'./test/output_report-day-{day}-group-{group}-{terminal_id}.csv', encoding= 'cp949', index = False)
             
             total_cost += float(ga_report['Costs'].tolist()[-1])
             if float(ga_report['Costs'].tolist()[-1]) > 1000000:
