@@ -18,22 +18,25 @@ def run_ga(terminal_id, day, group, demand_df):
     tmp_df = demand_df[demand_df['date']==f'2023-05-0{1+day}']
     tmp_df = tmp_df[tmp_df['Group'].isin([group])]
     tmp_df = tmp_df[tmp_df['터미널ID']==terminal_id]
-    tmp_df = pd.concat([unassigned_rows_dict[terminal_id], future_rows_dict[terminal_id], tmp_df], axis=0)
 
-    # 하차가능시작시간이 6시간 이내가 아닌 주문 미루기
-    future_rows = tmp_df[~(tmp_df['landing_end_times'].apply(lambda x: any(v != 0 for v in x))) |     # landing_end_times의 값 중 0이 아닌 값이 없는 행
-                         ~(tmp_df['landing_start_times'].apply(lambda x: any(v < 360 for v in x)))]  # landing_start_times의 값 중 360 미만인 값이 없는 행 
-
-    if not future_rows.empty:
-        #print("이전_future_rows_landing_start_times", future_rows['landing_start_times'].values.tolist())
-        future_rows = future_rows.apply(update_times, axis=1)
-        print("하차가능시작시간이 6시간 이후인 주문 수", len(future_rows))
-        #print("이후_future_rows_landing_start_times", future_rows['landing_start_times'].values.tolist())
-        future_rows_dict.update({terminal_id: future_rows})
-        tmp_df = tmp_df.drop(future_rows.index)
+    if day != 6:
+        tmp_df = pd.concat([unassigned_rows_dict[terminal_id], future_rows_dict[terminal_id], tmp_df], axis=0)
+        # 하차가능시작시간이 6시간 이내가 아닌 주문 미루기
+        future_rows = tmp_df[~(tmp_df['landing_end_times'].apply(lambda x: any(v != 0 for v in x))) |     # landing_end_times의 값 중 0이 아닌 값이 없는 행
+                            ~(tmp_df['landing_start_times'].apply(lambda x: any(v < 360 for v in x)))]  # landing_start_times의 값 중 360 미만인 값이 없는 행 
+        if not future_rows.empty:
+            #print("이전_future_rows_landing_start_times", future_rows['landing_start_times'].values.tolist())
+            future_rows = future_rows.apply(update_times, axis=1)
+            print("하차가능시작시간이 6시간 이후인 주문 수", len(future_rows))
+            #print("이후_future_rows_landing_start_times", future_rows['landing_start_times'].values.tolist())
+            future_rows_dict.update({terminal_id: future_rows})
+            tmp_df = tmp_df.drop(future_rows.index)
+        else:
+            future_rows_dict.update({terminal_id: None})
     else:
+        tmp_df = pd.concat([unassigned_rows_dict[terminal_id], future_rows_dict[terminal_id], tmp_df], axis=0)
         future_rows_dict.update({terminal_id: None})
-
+        
     if tmp_df.empty:
         return None, None, None, 0
     order_id = [None] + tmp_df['주문ID'].tolist() # 주문ID order_id
