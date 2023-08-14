@@ -1,6 +1,5 @@
 import pandas as pd
 import random
-random.seed(42)
 import numpy as np
 import copy
 import os
@@ -9,7 +8,22 @@ from collections import defaultdict
 import copy
 from pyVRP import *
 from utils import *
-plan_time_hour = 2 # 몇시간 단위로 출발시키고 싶은지
+
+# distance_matrix랑 pivot_table_filled 만드는 함수 : 코드 완성한 다음에 테스트할때 실행
+#make_matrix_csv()
+
+if not os.path.exists('./report'):
+    os.makedirs('./report')
+if not os.path.exists('./제출파일1'):
+    os.makedirs('./제출파일1')
+if not os.path.exists('./제출파일1_최종'):
+    os.makedirs('./제출파일1_최종')
+if not os.path.exists('./제출파일2_최종'):
+    os.makedirs('./제출파일2_최종')
+
+random.seed(42)
+
+plan_time_hour = 1 # 몇시간 단위로 출발시키고 싶은지
 number_of_t = 6//plan_time_hour
 plan_time = plan_time_hour*60
 def run_ga(terminal_id, day, group, demand_df):
@@ -151,9 +165,6 @@ def run_ga(terminal_id, day, group, demand_df):
 
     return ga_report, output_report, fleet_used_now, len(unassigned_idx)
 
-# distance_matrix랑 pivot_table_filled 만드는 함수 : 코드 완성한 다음에 테스트할때 실행
-#make_matrix_csv()
-
 terminal_table = pd.read_csv('./과제3 실시간 주문 대응 Routing 최적화 (Terminals).csv', encoding='cp949')
 terminal_lst = terminal_table['ID'].unique()
 
@@ -190,6 +201,7 @@ output_column_names = ['ORD_NO', 'VehicleID', 'Sequence', 'SiteCode', 'ArrivalTi
 total_output_report = pd.DataFrame([], columns=output_column_names)
 
 moved_df = pd.DataFrame(columns=['Veh_ID', 'Origin', 'Destination', 'day', 'group', 'travel_cost'])
+start_time = tm.time()
 for day in range(0,7): #(0,7)
     for group in range(number_of_t*4): #(4)
         tot_veh_num = 0
@@ -225,6 +237,8 @@ for day in range(0,7): #(0,7)
         total_output_report.to_csv(f"./제출파일1/total_output_report_day_{day}_group_{group}.csv", index=False, encoding='cp949')
         if group % number_of_t == 0:
             get_submission_file_1(total_output_report, day, group, number_of_t)
+
+        print("걸린 시간 : ", tm.time() - start_time)
 
 total_vehicle_report = vehicle_output_report(total_output_report)
 total_vehicle_report.to_csv(f"./제출파일2_최종/total_vehicle.csv", index=False, encoding='cp949')
