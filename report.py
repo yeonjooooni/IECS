@@ -21,7 +21,7 @@ def output_report(solution, distance_matrix, parameters, velocity, fixed_cost, v
         reversed_sol.reverse()
         cap          = evaluate_capacity(parameters, solution[0][i], reversed_sol) 
         cap.reverse()
-        #solution[1][i]  = evaluate_subroute(solution[1][i],parameters)
+        
         dist = evaluate_distance(distance_matrix, solution[0][i], solution[1][i],parameters)
         wait, time = evaluate_time(distance_matrix, parameters, solution[0][i], solution[1][i], velocity = [velocity[solution[2][i][0]]])[0:2]
 
@@ -29,6 +29,8 @@ def output_report(solution, distance_matrix, parameters, velocity, fixed_cost, v
         for n in range(1, len(leave_cap)-1):
             leave_cap[n] = cap[n+1] 
         cost = evaluate_cost(dist, wait, parameters, solution[0][i], solution[1][i], fixed_cost = [fixed_cost[solution[2][i][0]]], variable_cost = [variable_cost[solution[2][i][0]]], time_window = time_window)
+        
+        #solution[1][i]  = evaluate_subroute(solution[1][i],parameters)
         if (route == 'closed'):
             subroute = [solution[0][i] + solution[1][i] + solution[0][i]]
         else: #elif (route == 'open'):
@@ -79,12 +81,11 @@ def show_report(solution, distance_matrix,  parameters, velocity, fixed_cost, va
     no_fixed_cost_count = [0]*len(fleet_used)
     
     for i in range(0, len(solution[1])):
-        subroute_actual = [solution[0][i] + solution[1][i] + solution[0][i] ]
         reversed_sol = copy.deepcopy(solution[1][i])
         reversed_sol.reverse()
         cap          = evaluate_capacity(parameters, solution[0][i], reversed_sol) 
         cap.reverse()
-        solution[1][i] = evaluate_subroute(solution[1][i],parameters)
+        
         dist         = evaluate_distance(real_distance_matrix, solution[0][i], solution[1][i], parameters)
         wait, time   = evaluate_time(distance_matrix, parameters, solution[0][i], solution[1][i], velocity = [velocity[solution[2][i][0]]])[0:2]
         
@@ -101,7 +102,8 @@ def show_report(solution, distance_matrix,  parameters, velocity, fixed_cost, va
             cost = evaluate_cost(dist, wait, parameters, solution[0][i], solution[1][i], fixed_cost = [fixed_cost[solution[2][i][0]]], variable_cost = [variable_cost[solution[2][i][0]]], time_window = time_window)
         else:
             cost = evaluate_cost(dist, wait, parameters, solution[0][i], solution[1][i], fixed_cost = [0],                               variable_cost = [variable_cost[solution[2][i][0]]], time_window = time_window)
-
+        
+        #solution[1][i] = evaluate_subroute(solution[1][i],parameters)
         if (route == 'closed'):
             subroute = [solution[0][i] + solution[1][i] + solution[0][i] ]
         elif (route == 'open'):
@@ -120,7 +122,7 @@ def show_report(solution, distance_matrix,  parameters, velocity, fixed_cost, va
                     tt = time[j]
                 td = td + dist[j]
                 tc = tc + cost[j]
-            report_lst.append(['#' + str(i+1), 'VHE_' + str(vehicle_index[solution[2][i][0]]+2), activity, city_name_list[subroute_actual[0][j]], cap[j], leave_cap[j], round(wait[j],2), arrive_time+time_absolute, round(time[j],2)+time_absolute, round(dist[j],2), round(cost[j],2) ])
+            report_lst.append(['#' + str(i+1), 'VEH_' + str(vehicle_index[solution[2][i][0]]+2), activity, city_name_list[subroute[0][j]], cap[j], leave_cap[j], round(wait[j],2), arrive_time+time_absolute, round(time[j],2)+time_absolute, round(dist[j],2), round(cost[j],2) ])
         report_lst.append(['-//-', '-//-', '-//-', '-//-','-//-', '-//-', '-//-', '-//-', '-//-', '-//-', '-//-'])
     report_lst.append(['MAX TIME', '', '','', '', '', '', '', round(tt,2), '', ''])
     report_lst.append(['TOTAL', '', '','', '', '', '', '', '', round(td,2), round(tc,2)])
