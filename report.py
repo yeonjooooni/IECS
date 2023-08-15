@@ -155,7 +155,7 @@ def vehicle_output_report(output_report):   # this output_report must include te
         vehicle_servicetime[vehicle_table.iloc[i]['VehNum']] = 0
         vehicle_wait_time[vehicle_table.iloc[i]['VehNum']] = 0
         vehicle_volume[vehicle_table.iloc[i]['VehNum']] = 0
-        
+
     for key, value in vehicle_cnt.items():
         fixedCost = vehicle_table[vehicle_table['VehNum']==key]["FixedCost"].values[0]
         varCost = vehicle_table[vehicle_table['VehNum']==key]["VariableCost"].values[0]
@@ -164,7 +164,6 @@ def vehicle_output_report(output_report):   # this output_report must include te
         VehID_table = output_report[output_report['VehicleID'] == key]
         # 차량 사용하지 않은 경우 -1
         last_end_time = -1
-        start_time = 0
         for i in range(len(VehID_table.index[:-1])): #마지막에 복귀하는것 제외
             if VehID_table.iloc[i]['Delivered'] == 'Yes':
                 vehicle_cnt[key] += 1
@@ -191,7 +190,10 @@ def vehicle_output_report(output_report):   # this output_report must include te
         total_distance = vehicle_traveldistance[key]
         vehicle_servicetime[key] = vehicle_cnt[key] * 60
         vehicle_traveltime[key] = vehicle_worktime[key] - vehicle_servicetime[key] - vehicle_wait_time[key]
-        totalCost = varCost*total_distance + fixedCost
+        if vehicle_cnt[key] !=0 :
+            totalCost = varCost*total_distance + fixedCost
+        else:
+            totalCost = 0
         # 'VehicleID', 'Count', 'Volume', 'TravelDistance', 'WorkTime', 'TravelTime', 'ServiceTime', 'WaitingTime', 'TotalCost', 'FixedCost',	'VariableCost'
         report_lst.append([key, vehicle_cnt[key], vehicle_volume[key], vehicle_traveldistance[key], vehicle_worktime[key], vehicle_traveltime[key], vehicle_servicetime[key], vehicle_wait_time[key], totalCost, fixedCost, varCost*total_distance])
     report_df = pd.DataFrame(report_lst, columns=column_names)
