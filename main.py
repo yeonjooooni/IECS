@@ -204,8 +204,8 @@ if __name__ == "__main__":
     total_output_report = pd.DataFrame([], columns=output_column_names)
 
     moved_df = pd.DataFrame(columns=['Veh_ID', 'Origin', 'Destination', 'day', 'group', 'travel_cost'])
-    for day in range(1): #(0,7)
-        for time_batch in range(2): # (number_of_t*4)
+    for day in range(0,7): #(0,7)
+        for time_batch in range(number_of_t*4): # (number_of_t*4)
             tot_veh_num = 0
             for terminal_id in terminal_lst:
                 print("terminal id:", terminal_id)
