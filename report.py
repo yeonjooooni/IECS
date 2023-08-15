@@ -134,6 +134,7 @@ def vehicle_output_report(output_report):   # this output_report must include te
     vehicle_table = pd.read_csv('./과제3 실시간 주문 대응 Routing 최적화 (veh_table).csv', encoding='cp949')
     orders_table = pd.read_csv("./과제3 실시간 주문 대응 Routing 최적화 (orders_table) 수정완료.csv", encoding='cp949')
     distance_table = pd.read_csv("./distance_matrix.csv", index_col=0)
+    pivot_table_filled = pd.read_csv("./pivot_table_filled.csv", index_col=0)
     column_names = ['VehicleID', 'Count', 'Volume', 'TravelDistance', 'WorkTime', 'TravelTime', 'ServiceTime', 'WaitingTime', 'TotalCost', 'FixedCost',	'VariableCost']
     vehicle_cnt = {}
     vehicle_volume = {}
@@ -179,8 +180,8 @@ def vehicle_output_report(output_report):   # this output_report must include te
 
             else: #상차
                 # reallocate로 인한 이동 시간 고려
-                if last_end_time != -1:
-                    vehicle_worktime[key] += (day_to_min(VehID_table.iloc[i]['ArrivalTime']) - last_end_time)
+                if last_end_time != -1 and VehID_table.iloc[i]['SiteCode'] != VehID_table.iloc[i+1]['SiteCode']:
+                    vehicle_worktime[key] += pivot_table_filled.loc[VehID_table.iloc[i]['SiteCode'], VehID_table.iloc[i+1]['SiteCode']]
                 last_end_time = day_to_min(VehID_table.iloc[i]['ArrivalTime'])
             if i == len(VehID_table.index)-2:  #마지막 vehicle_traveldistance 제외
                 continue
