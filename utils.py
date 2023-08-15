@@ -141,6 +141,12 @@ def min_to_day(minute):
         hr = str(hr % 24)
         return day+" "+hr.zfill(2)+":"+minute.zfill(2)
 
+def day_to_min(date):
+    day = int(date[len("2023-05-"):len("2023-05-01")])-1
+    hour = int(date[len("2023-05-01 "):len("2023-05-01 00")])
+    min = int(date[len("2023-05-01 00:"):len("2023-05-01 00:00")])
+
+    return day*24*60+hour*60+min
 
 # 시간을 분 단위로 변환하는 함수
 def time_to_minutes(time_str):
