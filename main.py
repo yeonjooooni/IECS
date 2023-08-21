@@ -79,23 +79,23 @@ def run_ga(terminal_id, day, group, demand_df):
     #print("landing_start_times", landing_start_times)
     landing_end_times = [[(4320) for _ in range(3)]]
     landing_end_times.extend(tmp_df['landing_end_times'].tolist())
-    # 하차 작업시간 가변값으로 받을 수 있게 변경
-    tw_service_time = [0]
-    tw_service_time.extend(tmp_df['하차작업시간(분)'].tolist())
-
+    #print("landing_end_times", landing_end_times)
+    # print("index_positions", index_positions)
     parameters = pd.DataFrame({
         'arrive_station': index_positions,
         'TW_early':landing_start_times,
         'TW_late':landing_end_times,
-        'TW_service_time': tw_service_time,
-        'TW_wait_cost': 0,
+        'TW_service_time':60,
+        'TW_wait_cost':0,
         'cbm':cbm_list
     })
+
     # Tranform to Numpy Array
     coordinates = coordinates.values
     parameters  = parameters.values
     distance_matrix = pivot_table.values
     real_distance_matrix = real_distance_matrix.values
+    
     # Parameters - Model
     n_depots    =  1           # The First n Rows of the 'distance_matrix' or 'coordinates' are Considered as Depots
     time_window = 'with'       # 'with', 'without'
@@ -118,10 +118,10 @@ def run_ga(terminal_id, day, group, demand_df):
 
     # Parameters - GA
     penalty_value   = 1000000    # GA Target Function Penalty Value for Violating the Problem Constraints
-    population_size = 10      # GA Population Size
+    population_size = 5      # GA Population Size
     mutation_rate   = 0.2     # GA Mutation Rate
-    elite           = 10        # GA Elite Member(s) - Total Number of Best Individual(s) that (is)are Maintained 
-    generations     = 5    # GA Number of Generations
+    elite           = 1        # GA Elite Member(s) - Total Number of Best Individual(s) that (is)are Maintained 
+    generations     = 3    # GA Number of Generations
     
     # Run GA Function
     ga_report, output_report, solution, fleet_used_now = genetic_algorithm_vrp(coordinates, distance_matrix, parameters, velocity, fixed_cost, variable_cost, capacity, real_distance_matrix, population_size, vehicle_types, n_depots, route, model, time_window, fleet_available, mutation_rate, elite, generations, penalty_value, graph, 'rw', fleet_available_no_fixed_cost, time_absolute = 1440 * day  +  plan_time * group,  order_id = order_id, city_name_list=city_name_list, vehicle_index = vehicle_index)   
@@ -245,7 +245,7 @@ for day in range(0 , total_days):
         veh_table['CenterArriveTime'] = veh_table['CenterArriveTime'].apply(lambda x: max(x - plan_time, 0))
 
         total_output_report.to_csv(f"{FOLDER_PATH}/제출파일1/total_output_report_day_{day}_group_{group}.csv", index=False, encoding='cp949')
-        if group % number_of_t == 0:
+        if group % number_of_t == number_of_t-1:
             get_submission_file_1(total_output_report, day, group, number_of_t, FOLDER_PATH, demand_df, start_day)
 
 total_vehicle_report = vehicle_output_report(total_output_report)
@@ -254,5 +254,3 @@ print("total_cost :", total_cost)
 print("infeasible_solution :", infeasible_solution)
 print("unassigned_orders_forever :", unassigned_orders_forever)
 print("terminal to terminal cost:", moved_df['travel_cost'].sum())
- 
-get_submission_file_1_again(FOLDER_PATH)
