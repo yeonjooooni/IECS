@@ -2,9 +2,9 @@ import pandas as pd
 import numpy as np
 import copy
 import os
+from matplotlib import pyplot as plt
 from eval import *
 from utils import *
-
 def output_report(solution, distance_matrix, parameters, velocity, fixed_cost, variable_cost, route, time_window, time_absolute, order_id, city_name_list, vehicle_index):
     column_names = ['ORD_NO', 'VehicleID', 'Sequence', 'SiteCode', 'ArrivalTime', 'WaitingTime', 'ServiceTime', 'DepartureTime', 'Delivered']
     tt = 0
@@ -130,6 +130,7 @@ def vehicle_output_report(output_report):   # this output_report must include te
     vehicle_table = pd.read_csv('./과제3 실시간 주문 대응 Routing 최적화 (veh_table).csv', encoding='cp949')
     orders_table = pd.read_csv("./과제3 실시간 주문 대응 Routing 최적화 (orders_table) 수정완료.csv", encoding='cp949')
     distance_table = pd.read_csv("./distance_matrix.csv", index_col=0)
+    pivot_table_filled = pd.read_csv("./pivot_table_filled.csv", index_col=0)
     column_names = ['VehicleID', 'Count', 'Volume', 'TravelDistance', 'WorkTime', 'TravelTime', 'ServiceTime', 'WaitingTime', 'TotalCost', 'FixedCost',	'VariableCost']
     vehicle_cnt = {}
     vehicle_volume = {}
@@ -152,38 +153,45 @@ def vehicle_output_report(output_report):   # this output_report must include te
         vehicle_wait_time[vehicle_table.iloc[i]['VehNum']] = 0
         vehicle_volume[vehicle_table.iloc[i]['VehNum']] = 0
 
-    for i in range(len(output_report)):
-        # 지금 vehicleID 안맞아서 임시로 넣어놓은 if문
-        print(output_report.iloc[i]['VehicleID'])
-        if output_report.iloc[i]['VehicleID'] == "-//-":
-            continue    
-        if output_report.iloc[i]['VehicleID'] not in vehicle_cnt.keys():
-            print("error VehicleID not in Vehicle table")
-            continue
-        if output_report.iloc[i]['Delivered'] == 'Yes':
-            vehicle_cnt[output_report.iloc[i]['VehicleID']] += 1
-            vehicle_wait_time[output_report.iloc[i]['VehicleID']] += float(output_report.iloc[i]['WaitingTime']) #waiting time 누적
-            vehicle_volume[output_report.iloc[i]['VehicleID']] += float(orders_table[orders_table['주문ID']==output_report.iloc[i]["ORD_NO"]]["CBM"].values[0])
-        elif output_report.iloc[i]['Delivered'] == "temp":
-            vehicle_worktime[output_report.iloc[i]['VehicleID']] += float(output_report.iloc[i]['ServiceTime']) - 60
-        elif output_report.iloc[i]['Delivered'] == '-//-':
-            continue
-    #상차지에서 주문 pickup 아무 조건 없음
-
     for key, value in vehicle_cnt.items():
         fixedCost = vehicle_table[vehicle_table['VehNum']==key]["FixedCost"].values[0]
         varCost = vehicle_table[vehicle_table['VehNum']==key]["VariableCost"].values[0]
         #for total_distance
         # total report에서 한 차량을 이용하는 것에 대한 모든 기록
         VehID_table = output_report[output_report['VehicleID'] == key]
-        for i in range(len(VehID_table.index[:-1])):
-            if VehID_table.iloc[i]['SiteCode'] == VehID_table.iloc[i+1]['SiteCode']:
+        # 차량 사용하지 않은 경우 -1
+        last_end_time = -1
+        for i in range(len(VehID_table.index[:-1])): #마지막에 복귀하는것 제외
+            if VehID_table.iloc[i]['Delivered'] == 'Yes':
+                vehicle_cnt[key] += 1
+                vehicle_wait_time[key] += float(VehID_table.iloc[i]['WaitingTime']) #waiting time 누적
+                vehicle_volume[key] += float(orders_table[orders_table['주문ID']==VehID_table.iloc[i]["ORD_NO"]]["CBM"].values[0])
+                vehicle_worktime[key] += (day_to_min(VehID_table.iloc[i]['ArrivalTime']) - last_end_time)
+                vehicle_worktime[key] += (day_to_min(VehID_table.iloc[i]['DepartureTime']) - day_to_min(VehID_table.iloc[i]['ArrivalTime']))
+                last_end_time = day_to_min(VehID_table.iloc[i]['DepartureTime'])
+
+            elif VehID_table.iloc[i]['Delivered'] == "temp":
+                vehicle_worktime[key] += (day_to_min(VehID_table.iloc[i]['ArrivalTime']) - last_end_time)
+                last_end_time = day_to_min(VehID_table.iloc[i]['ArrivalTime'])    
+
+            else: #상차
+                # reallocate로 인한 이동 시간 고려
+                if last_end_time != -1 and VehID_table.iloc[i]['SiteCode'] != VehID_table.iloc[i+1]['SiteCode']:
+                    vehicle_worktime[key] += pivot_table_filled.loc[VehID_table.iloc[i]['SiteCode'], VehID_table.iloc[i+1]['SiteCode']]
+                last_end_time = day_to_min(VehID_table.iloc[i]['ArrivalTime'])
+            if i == len(VehID_table.index)-2:  #마지막 vehicle_traveldistance 제외
                 continue
+            if VehID_table.iloc[i]['SiteCode'] == VehID_table.iloc[i+1]['SiteCode']:
+                continue             
             vehicle_traveldistance[key] += distance_table.loc[VehID_table.iloc[i]['SiteCode'], VehID_table.iloc[i+1]['SiteCode']]
         total_distance = vehicle_traveldistance[key]
         vehicle_servicetime[key] = vehicle_cnt[key] * 60
         vehicle_traveltime[key] = vehicle_worktime[key] - vehicle_servicetime[key] - vehicle_wait_time[key]
-        totalCost = varCost*total_distance + fixedCost
+        if vehicle_cnt[key] !=0 :
+            totalCost = varCost*total_distance + fixedCost
+        else:
+            totalCost = 0
+            fixedCost = 0
         # 'VehicleID', 'Count', 'Volume', 'TravelDistance', 'WorkTime', 'TravelTime', 'ServiceTime', 'WaitingTime', 'TotalCost', 'FixedCost',	'VariableCost'
         report_lst.append([key, vehicle_cnt[key], vehicle_volume[key], vehicle_traveldistance[key], vehicle_worktime[key], vehicle_traveltime[key], vehicle_servicetime[key], vehicle_wait_time[key], totalCost, fixedCost, varCost*total_distance])
     report_df = pd.DataFrame(report_lst, columns=column_names)
