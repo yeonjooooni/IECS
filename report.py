@@ -5,6 +5,7 @@ import os
 from matplotlib import pyplot as plt
 from eval import *
 from utils import *
+from datetime import datetime, timedelta
 def output_report(solution, distance_matrix, parameters, velocity, fixed_cost, variable_cost, route, time_window, time_absolute, order_id, city_name_list, vehicle_index):
     column_names = ['ORD_NO', 'VehicleID', 'Sequence', 'SiteCode', 'ArrivalTime', 'WaitingTime', 'ServiceTime', 'DepartureTime', 'Delivered']
     tt = 0
@@ -197,7 +198,9 @@ def vehicle_output_report(output_report):   # this output_report must include te
     report_df = pd.DataFrame(report_lst, columns=column_names)
     return report_df
 
-def get_submission_file_1(df, day, group, number_of_t, FOLDER_PATH, demand_df):
+def get_submission_file_1(df, day, group, number_of_t, FOLDER_PATH, demand_df, start_day): 
+    today = start_day + timedelta(days = day)
+    today = today.strftime('%Y-%m-%d')
     df = df[df['ORD_NO'] != '-//-']
     df = df.sort_values(by=['VehicleID', 'ArrivalTime'])
     df = df.reset_index(drop=True)
@@ -227,10 +230,10 @@ def get_submission_file_1(df, day, group, number_of_t, FOLDER_PATH, demand_df):
     df.loc[((df['ArrivalTime'].notnull()) & (df['DepartureTime'].isnull())), 'DepartureTime'] = df['ArrivalTime']
 
     df['ArrivalTime_datetime'] = pd.to_datetime(df['ArrivalTime'])
-    df['ArrivalTime_ElapsedMinutes'] = (df['ArrivalTime_datetime'] - pd.to_datetime('2023-05-01 00:00')).dt.total_seconds() / 60
+    df['ArrivalTime_ElapsedMinutes'] = (df['ArrivalTime_datetime'] - pd.to_datetime(f'{start_day} 00:00')).dt.total_seconds() / 60
     condition_arr = df['ArrivalTime_ElapsedMinutes'] > 1440 * day  +  360 * (group//number_of_t)
     df['DepartureTime_datetime'] = pd.to_datetime(df['DepartureTime'])
-    df['DepartureTime_ElapsedMinutes'] = (df['DepartureTime_datetime'] - pd.to_datetime('2023-05-01 00:00')).dt.total_seconds() / 60
+    df['DepartureTime_ElapsedMinutes'] = (df['DepartureTime_datetime'] - pd.to_datetime(f'{start_day} 00:00')).dt.total_seconds() / 60
     condition_dep = df['DepartureTime_ElapsedMinutes'] > 1440 * day  +  360 * (group//number_of_t)
 
     df.loc[(condition_arr)&(condition_dep), ['ArrivalTime', 'WaitingTime', 'ServiceTime', 'DepartureTime']] = 'Null'
@@ -239,8 +242,8 @@ def get_submission_file_1(df, day, group, number_of_t, FOLDER_PATH, demand_df):
     df.loc[((df['ArrivalTime'].notnull()) & (df['ServiceTime'].isnull())), 'ServiceTime'] = 0
     df.loc[((df['ArrivalTime'].notnull()) & (df['DepartureTime'].isnull())), 'DepartureTime'] = df['ArrivalTime']
     df.drop(['ArrivalTime_datetime', 'ArrivalTime_ElapsedMinutes', 'DepartureTime_datetime', 'DepartureTime_ElapsedMinutes'], axis = 1, inplace=True)
-       
-    tmp_df = demand_df[demand_df['date']==f'2023-05-0{1+day}']
+        
+    tmp_df = demand_df[demand_df['date'] == today]
     tmp_df = tmp_df[tmp_df['Group'].isin([group//number_of_t])]
 
     total_order_ID = tmp_df['주문ID'].unique().tolist()
