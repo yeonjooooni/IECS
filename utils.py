@@ -64,15 +64,19 @@ def min_to_day(minute):
         minute = int(round(minute, 0))
         hr = minute // 60
         minute = str(minute % 60)
-        day = "2023-05-0{}".format(1+hr//24)
+        #day = "2023-05-0{}".format(1+hr//24)
+        day = 1 + hr // 24
         hr = str(hr % 24)
-        return day+" "+hr.zfill(2)+":"+minute.zfill(2)
+        #return day+" "+hr.zfill(2)+":"+minute.zfill(2)
+        return f"2023-05-{day:02} {hr.zfill(2)}:{minute.zfill(2)}" # 2023, 05는 변경 가능
 
 def day_to_min(date):
-    day = int(date[len("2023-05-"):len("2023-05-01")])-1
-    hour = int(date[len("2023-05-01 "):len("2023-05-01 00")])
-    min = int(date[len("2023-05-01 00:"):len("2023-05-01 00:00")])
-
+    #day = int(date[len("2023-05-"):len("2023-05-01")])-1
+    #hour = int(date[len("2023-05-01 "):len("2023-05-01 00")])
+    #min = int(date[len("2023-05-01 00:"):len("2023-05-01 00:00")])
+    day = int(date[8:10])
+    hour = int(date[11:13])
+    min = int(date[14:])
     return day*24*60+hour*60+min
 
 # 시간을 분 단위로 변환하는 함수

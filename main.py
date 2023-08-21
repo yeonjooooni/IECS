@@ -156,7 +156,7 @@ def run_ga(terminal_id, day, group, demand_df):
 # make_matrix_csv()
 
 # 제출 파일 폴더들 저장될 위치
-FOLDER_PATH = './결과_elite10'
+FOLDER_PATH = './테스트2'
 if not os.path.exists(FOLDER_PATH):
     os.makedirs(FOLDER_PATH)
 if not os.path.exists(f'{FOLDER_PATH}/report'):
@@ -173,7 +173,7 @@ random.seed(42)
 total_days = 7
 start_day = '2023-05-01'
 start_day = datetime.strptime(start_day, '%Y-%m-%d')
-plan_time_hour = 0.5 # 몇시간 단위로 출발시키고 싶은지
+plan_time_hour = 3 # 몇시간 단위로 출발시키고 싶은지
 number_of_t = int(6//plan_time_hour)
 plan_time = plan_time_hour*60
 
@@ -188,7 +188,7 @@ veh_table = pd.read_csv('./과제3 실시간 주문 대응 Routing 최적화 (ve
 veh_table['CurrentCenter'] = veh_table['StartCenter']
 veh_table['CenterArriveTime'] = 0
 veh_table['IsUsed'] = 0
-'/'
+
 dist_matrix = pd.read_csv("./distance_matrix.csv", index_col=0)
 time_matrix = pd.read_csv("./pivot_table_filled.csv", index_col=0)
 
@@ -212,7 +212,7 @@ output_column_names = ['ORD_NO', 'VehicleID', 'Sequence', 'SiteCode', 'ArrivalTi
 total_output_report = pd.DataFrame([], columns=output_column_names)
 
 moved_df = pd.DataFrame(columns=['Veh_ID', 'Origin', 'Destination', 'day', 'group', 'travel_cost'])
-for day in range(0,total_days): 
+for day in range(0 , total_days): 
     for group in range(number_of_t*4): 
         tot_veh_num = 0
         for terminal_id in terminal_lst:
@@ -246,7 +246,7 @@ for day in range(0,total_days):
 
         total_output_report.to_csv(f"{FOLDER_PATH}/제출파일1/total_output_report_day_{day}_group_{group}.csv", index=False, encoding='cp949')
         if group % number_of_t == 0:
-            get_submission_file_1(total_output_report, day, group, number_of_t, FOLDER_PATH)
+            get_submission_file_1(total_output_report, day, group, number_of_t, FOLDER_PATH, demand_df, start_day)
 
 total_vehicle_report = vehicle_output_report(total_output_report)
 total_vehicle_report.to_csv(f"{FOLDER_PATH}/제출파일2_최종/total_vehicle.csv", index=False, encoding='cp949')
