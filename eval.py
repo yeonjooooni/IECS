@@ -52,7 +52,8 @@ def evaluate_time(distance_matrix, parameters, depot, subroute, velocity):
             day_num = 2
         else:
             day_num = 2  
-        time[i] = time[i] + tw_st[subroute_j][i]
+        if subroute_specified_by_order_i[i]!=subroute_specified_by_order_j[i]:      
+            time[i] = time[i] + tw_st[subroute_j][i]
                 
         if (i  < len(time) - 1):
             time[i+1] = time[i]

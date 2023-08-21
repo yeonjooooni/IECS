@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+from matplotlib import pyplot as plt
 import random
 from tqdm.auto import tqdm
 from collections import defaultdict
@@ -67,6 +68,12 @@ def min_to_day(minute):
         hr = str(hr % 24)
         return day+" "+hr.zfill(2)+":"+minute.zfill(2)
 
+def day_to_min(date):
+    day = int(date[len("2023-05-"):len("2023-05-01")])-1
+    hour = int(date[len("2023-05-01 "):len("2023-05-01 00")])
+    min = int(date[len("2023-05-01 00:"):len("2023-05-01 00:00")])
+
+    return day*24*60+hour*60+min
 
 # 시간을 분 단위로 변환하는 함수
 def time_to_minutes(time_str):
@@ -75,7 +82,7 @@ def time_to_minutes(time_str):
 
 # 3일간의 하차 가능 시작과 끝 시간 리스트를 구하는 함수
 # 여기서 이미 time_window와 무관하게 3일차(4320분)에 딱 cut하도록 만들어 놓음
-def get_trip_time_lists(start_time, end_time, day, group, num_days=3, number_of_t=3):
+def get_trip_time_lists(start_time, end_time, day, group, num_days=3, number_of_t=3): #수정필요
     start_time_minutes = time_to_minutes(start_time)
     end_time_minutes = time_to_minutes(end_time)
 
