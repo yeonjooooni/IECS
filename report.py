@@ -36,8 +36,8 @@ def output_report(solution, distance_matrix, parameters, velocity, fixed_cost, v
             if (j == 0):
                 activity = 'start'
                 arrive_time = round(time[j], 2)
-                delivered_status = ''
-                ORD_NO = None
+                delivered_status = 'Null'
+                ORD_NO = 'Null'
             else:
                 arrive_time = round(time[j] - tw_st[subroute[0][j]] - wait[j], 2)
             if (j > 0 and j < len(subroute[0]) - 1):
@@ -47,7 +47,7 @@ def output_report(solution, distance_matrix, parameters, velocity, fixed_cost, v
             if (j == len(subroute[0]) - 1):
                 activity = 'finish'
                 delivered_status = "temp"
-                ORD_NO = None
+                ORD_NO = 'Null'
                 if (time[j] > tt):
                     tt = time[j]
                 td = td + dist[j]
@@ -60,7 +60,7 @@ def output_report(solution, distance_matrix, parameters, velocity, fixed_cost, v
             #activity = finish, 우리가 보려고 표시한 return한 차량
         
             report_lst.append([ORD_NO, 'VEH_' + str(vehicle_index[solution[2][i][0]]+2), j+1, city_name,  # 2 더함
-                               min_to_day(arrive_time+time_absolute), round(wait[j], 2), 60 if activity != 'start' else '', min_to_day(round(time[j], 2)+time_absolute) if activity == 'service' else '', delivered_status])
+                               min_to_day(arrive_time+time_absolute), round(wait[j], 2), 60 if activity != 'start' else None, min_to_day(round(time[j], 2)+time_absolute) if activity == 'service' else None, delivered_status])
         
         report_lst.append(['-//-', '-//-', '-//-', '-//-', '-//-', '-//-', '-//-', '-//-', '-//-'])
     
@@ -197,7 +197,7 @@ def vehicle_output_report(output_report):   # this output_report must include te
     report_df = pd.DataFrame(report_lst, columns=column_names)
     return report_df
 
-def get_submission_file_1(df, day, group, number_of_t, FOLDER_PATH):
+def get_submission_file_1(df, day, group, number_of_t, FOLDER_PATH, demand_df):
     df = df[df['ORD_NO'] != '-//-']
     df = df.sort_values(by=['VehicleID', 'ArrivalTime'])
     df = df.reset_index(drop=True)
@@ -222,23 +222,35 @@ def get_submission_file_1(df, day, group, number_of_t, FOLDER_PATH):
     for group_name, group_data in grouped:
         df.loc[group_data.index, 'Sequence'] = range(1, len(group_data) + 1)
     df = df.reset_index(drop=True)
-    df['ArrivalTime_datetime'] = pd.to_datetime(df['ArrivalTime'])
-    df['ElapsedMinutes'] = (df['ArrivalTime_datetime'] - pd.to_datetime('2023-05-01 00:00')).dt.total_seconds() / 60
-    condition = df['ElapsedMinutes'] >= 1440 * day  +  360//number_of_t * group
-    df.loc[condition, ['ArrivalTime', 'WaitingTime', 'ServiceTime', 'DepartureTime']] = None
-    df.loc[condition & (df['Delivered'] == 'Yes'), 'Delivered'] = 'No'
+
     df.loc[((df['ArrivalTime'].notnull()) & (df['ServiceTime'].isnull())), 'ServiceTime'] = 0
     df.loc[((df['ArrivalTime'].notnull()) & (df['DepartureTime'].isnull())), 'DepartureTime'] = df['ArrivalTime']
-    df.drop(['ArrivalTime_datetime', 'ElapsedMinutes'], axis = 1, inplace=True)
+
+    df['ArrivalTime_datetime'] = pd.to_datetime(df['ArrivalTime'])
+    df['ArrivalTime_ElapsedMinutes'] = (df['ArrivalTime_datetime'] - pd.to_datetime('2023-05-01 00:00')).dt.total_seconds() / 60
+    condition_arr = df['ArrivalTime_ElapsedMinutes'] > 1440 * day  +  360 * (group//number_of_t)
+    df['DepartureTime_datetime'] = pd.to_datetime(df['DepartureTime'])
+    df['DepartureTime_ElapsedMinutes'] = (df['DepartureTime_datetime'] - pd.to_datetime('2023-05-01 00:00')).dt.total_seconds() / 60
+    condition_dep = df['DepartureTime_ElapsedMinutes'] > 1440 * day  +  360 * (group//number_of_t)
+
+    df.loc[(condition_arr)&(condition_dep), ['ArrivalTime', 'WaitingTime', 'ServiceTime', 'DepartureTime']] = 'Null'
+    df.loc[(~condition_arr)&(condition_dep), ['WaitingTime', 'ServiceTime', 'DepartureTime']] = 'Null'
+    df.loc[condition_dep & (df['Delivered'] == 'Yes'), 'Delivered'] = 'No'
+    df.loc[((df['ArrivalTime'].notnull()) & (df['ServiceTime'].isnull())), 'ServiceTime'] = 0
+    df.loc[((df['ArrivalTime'].notnull()) & (df['DepartureTime'].isnull())), 'DepartureTime'] = df['ArrivalTime']
+    df.drop(['ArrivalTime_datetime', 'ArrivalTime_ElapsedMinutes', 'DepartureTime_datetime', 'DepartureTime_ElapsedMinutes'], axis = 1, inplace=True)
+       
+    tmp_df = demand_df[demand_df['date']==f'2023-05-0{1+day}']
+    tmp_df = tmp_df[tmp_df['Group'].isin([group//number_of_t])]
+
+    total_order_ID = tmp_df['주문ID'].unique().tolist()
+    assigned_order = df['ORD_NO'].unique().tolist()
+    unassigned_order_ID = []
+    for id in total_order_ID:
+        if id not in assigned_order:
+            unassigned_order_ID.append(id)
+    unassigned_order_ID=pd.DataFrame(unassigned_order_ID, columns=['ORD_NO'])
+    df = pd.concat([df, unassigned_order_ID], axis=0)
+    df.fillna("Null", inplace=True)
+
     df.to_csv(f"{FOLDER_PATH}/제출파일1_최종/total_output_report_day_{day}_group_{group // number_of_t}.csv", index=False, encoding='cp949')
-
-
-def get_submission_file_1_again(FOLDER_PATH):
-    folder_path = f'{FOLDER_PATH}/제출파일1_최종'
-    csv_files = [file for file in os.listdir(folder_path) if file.endswith('.csv')]
-    for csv_file in csv_files:
-        file_path = os.path.join(folder_path, csv_file)
-        df = pd.read_csv(file_path, encoding='cp949')
-        df.loc[df['ArrivalTime'].notnull() & df['ServiceTime'].isnull(), 'ServiceTime'] = 0
-        df.loc[df['ArrivalTime'].notnull() & df['DepartureTime'].isnull(), 'DepartureTime'] = df['ArrivalTime']
-        df.to_csv(file_path, index=False, encoding='cp949')
