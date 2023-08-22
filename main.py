@@ -239,7 +239,7 @@ for day in range(0 , total_days):
             max_car = check_max_car(terminal_id, max_car, fleet_used_now, day, num_unassigned)
 
         # 미처리 주문에 대한 차량 재배치
-        if day != total_days-1 and group != number_of_t*4-1:
+        if not (day == total_days-1 and group == number_of_t*4-1):
             reallocate_veh(max_car, veh_table, asc_dist_dict, unassigned_orders_count_dict, terminal_lst, day, group, moved_df)
         # 시간 6시간 흐름
         veh_table['CenterArriveTime'] = veh_table['CenterArriveTime'].apply(lambda x: max(x - plan_time, 0))
