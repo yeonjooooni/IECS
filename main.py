@@ -81,11 +81,13 @@ def run_ga(terminal_id, day, group, demand_df):
     landing_end_times.extend(tmp_df['landing_end_times'].tolist())
     #print("landing_end_times", landing_end_times)
     # print("index_positions", index_positions)
+    tw_service_time = [0]
+    tw_service_time.extend(tmp_df['하차작업시간(분)'].tolist())
     parameters = pd.DataFrame({
         'arrive_station': index_positions,
-        'TW_early':landing_start_times,
-        'TW_late':landing_end_times,
-        'TW_service_time':60,
+        'TW_early': landing_start_times,
+        'TW_late': landing_end_times,
+        'TW_service_time': tw_service_time,
         'TW_wait_cost':0,
         'cbm':cbm_list
     })
