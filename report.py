@@ -128,8 +128,8 @@ def show_report(solution, distance_matrix,  parameters, velocity, fixed_cost, va
     return report_df
 
 def vehicle_output_report(output_report):   # this output_report must include temp delivered state
-    vehicle_table = pd.read_csv('./과제3 실시간 주문 대응 Routing 최적화 (veh_table).csv', encoding='cp949')
-    orders_table = pd.read_csv("./과제3 실시간 주문 대응 Routing 최적화 (orders_table) 수정완료.csv", encoding='cp949')
+    vehicle_table = pd.read_csv('./vehicles.csv', encoding='cp949')
+    orders_table = pd.read_csv("./orders.csv", encoding='cp949')
     distance_table = pd.read_csv("./distance_matrix.csv", index_col=0)
     pivot_table_filled = pd.read_csv("./pivot_table_filled.csv", index_col=0)
     column_names = ['VehicleID', 'Count', 'Volume', 'TravelDistance', 'WorkTime', 'TravelTime', 'ServiceTime', 'WaitingTime', 'TotalCost', 'FixedCost',	'VariableCost']

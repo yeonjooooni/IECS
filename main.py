@@ -121,10 +121,10 @@ def run_ga(terminal_id, day, group, demand_df):
 
     # Parameters - GA
     penalty_value   = 1000000    # GA Target Function Penalty Value for Violating the Problem Constraints
-    population_size = 20      # GA Population Size
+    population_size = 5      # GA Population Size
     mutation_rate   = 0.2     # GA Mutation Rate
     elite           = 3        # GA Elite Member(s) - Total Number of Best Individual(s) that (is)are Maintained 
-    generations     = 100    # GA Number of Generations
+    generations     = 3    # GA Number of Generations
     
     # Run GA Function
     ga_report, output_report, solution, fleet_used_now = genetic_algorithm_vrp(coordinates, distance_matrix, parameters, velocity, fixed_cost, variable_cost, capacity, real_distance_matrix, population_size, vehicle_types, n_depots, route, model, time_window, fleet_available, mutation_rate, elite, generations, penalty_value, graph, 'rw', fleet_available_no_fixed_cost, time_absolute = 1440 * day  +  plan_time * group,  order_id = order_id, city_name_list=city_name_list, vehicle_index = vehicle_index)   
@@ -173,10 +173,10 @@ if not os.path.exists(f'{FOLDER_PATH}/제출파일2_최종'):
 
 random.seed(42)
 
-total_days = 4
+total_days = 7
 start_day = '2023-05-01'
 start_day = datetime.strptime(start_day, '%Y-%m-%d')
-plan_time_hour = 3 # 몇시간 단위로 출발시키고 싶은지
+plan_time_hour = 6 # 몇시간 단위로 출발시키고 싶은지
 number_of_t = int(6//plan_time_hour)
 plan_time = plan_time_hour*60
 
@@ -215,7 +215,7 @@ output_column_names = ['ORD_NO', 'VehicleID', 'Sequence', 'SiteCode', 'ArrivalTi
 total_output_report = pd.DataFrame([], columns=output_column_names)
 
 moved_df = pd.DataFrame(columns=['Veh_ID', 'Origin', 'Destination', 'day', 'group', 'travel_cost'])
-for day in range(0 , total_days): 
+for day in range(0, total_days): 
     for group in range(number_of_t*4): 
         tot_veh_num = 0
         for terminal_id in terminal_lst:
