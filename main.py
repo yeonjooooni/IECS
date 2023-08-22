@@ -54,6 +54,7 @@ def run_ga(terminal_id, day, group, demand_df):
         return None, None, [0], 0
     order_id = [None] + tmp_df['주문ID'].tolist() # 주문ID order_id
     city_name_list = [terminal_id] + tmp_df['착지ID'].tolist()
+    service_time_list = [0] + tmp_df['하차작업시간(분)'].tolist()
     
     id_list_only_in_tmp_df = list(set(tmp_df['터미널ID'].values.tolist() + tmp_df['착지ID'].values.tolist() + [terminal_id]))
     pivot_table = pd.read_csv("./pivot_table_filled.csv", encoding='cp949', index_col=[0])
@@ -120,10 +121,10 @@ def run_ga(terminal_id, day, group, demand_df):
 
     # Parameters - GA
     penalty_value   = 1000000    # GA Target Function Penalty Value for Violating the Problem Constraints
-    population_size = 5      # GA Population Size
+    population_size = 20      # GA Population Size
     mutation_rate   = 0.2     # GA Mutation Rate
-    elite           = 1        # GA Elite Member(s) - Total Number of Best Individual(s) that (is)are Maintained 
-    generations     = 3    # GA Number of Generations
+    elite           = 3        # GA Elite Member(s) - Total Number of Best Individual(s) that (is)are Maintained 
+    generations     = 100    # GA Number of Generations
     
     # Run GA Function
     ga_report, output_report, solution, fleet_used_now = genetic_algorithm_vrp(coordinates, distance_matrix, parameters, velocity, fixed_cost, variable_cost, capacity, real_distance_matrix, population_size, vehicle_types, n_depots, route, model, time_window, fleet_available, mutation_rate, elite, generations, penalty_value, graph, 'rw', fleet_available_no_fixed_cost, time_absolute = 1440 * day  +  plan_time * group,  order_id = order_id, city_name_list=city_name_list, vehicle_index = vehicle_index)   
@@ -172,19 +173,19 @@ if not os.path.exists(f'{FOLDER_PATH}/제출파일2_최종'):
 
 random.seed(42)
 
-total_days = 7
+total_days = 4
 start_day = '2023-05-01'
 start_day = datetime.strptime(start_day, '%Y-%m-%d')
 plan_time_hour = 3 # 몇시간 단위로 출발시키고 싶은지
 number_of_t = int(6//plan_time_hour)
 plan_time = plan_time_hour*60
 
-terminal_table = pd.read_csv('./과제3 실시간 주문 대응 Routing 최적화 (Terminals).csv', encoding='cp949')
+terminal_table = pd.read_csv('./terminals.csv', encoding='cp949')
 terminal_lst = terminal_table['ID'].unique()
 
 unassigned_orders_count_dict = defaultdict(lambda : None)
 
-veh_table = pd.read_csv('./과제3 실시간 주문 대응 Routing 최적화 (veh_table).csv', encoding='cp949')
+veh_table = pd.read_csv('./vehicles.csv', encoding='cp949')
 # veh_table에 'CurrentCenter', 'CenterArriveTime', 'IsUsed' 열 추가
 # cueerntcenter : 이 veh이 도착할 center, centerarrivetime : 이 veh이 center에 도착할 시간, isused : 이 veh이 사용한 적 있는지 여부
 veh_table['CurrentCenter'] = veh_table['StartCenter']

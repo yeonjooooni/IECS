@@ -6,7 +6,7 @@ from tqdm.auto import tqdm
 from collections import defaultdict
 
 def preprocess_demand_df(number_of_t):
-    demand_df = pd.read_csv('./과제3 실시간 주문 대응 Routing 최적화 (orders_table) 수정완료.csv', encoding='cp949')
+    demand_df = pd.read_csv('./orders.csv', encoding='cp949')
     # 3일간의 하차 가능 시작과 끝 시간 리스트 계산
     landing_start_times = []
     landing_end_times = []
@@ -30,7 +30,7 @@ def update_times(row, number_of_t):
 def preprocess_coordinates(demand_df, pivot_table, id_list_only_in_tmp_df):
     departure_coordinates = demand_df.drop_duplicates(['착지ID'])[['착지ID', '하차지_위도', '하차지_경도']]
     departure_coordinates.columns = ['ID', 'y', 'x']
-    origin_coordinates = pd.read_csv("./과제3 실시간 주문 대응 Routing 최적화 (Terminals).csv", encoding='cp949', usecols = [0,1,2])
+    origin_coordinates = pd.read_csv("./terminals.csv", encoding='cp949', usecols = [0,1,2])
     origin_coordinates.columns = departure_coordinates.columns
     coordinates = pd.concat([departure_coordinates, origin_coordinates], ignore_index=True)
     coordinates = coordinates.set_index(['ID'])
@@ -229,7 +229,7 @@ def set_max_car(terminals):
 
 # distance_matrix.csv 와 pivot_table_filled.csv를 만드는 함수
 def make_matrix_csv():
-    od_df = pd.read_csv('./과제3 실시간 주문 대응 Routing 최적화 (od_matrix) 수정완료.csv')
+    od_df = pd.read_csv('./od_matrix_out.csv')
     unique_destinations = od_df['Destination'].unique()
 
     matrix = pd.DataFrame(columns = unique_destinations, index = unique_destinations)

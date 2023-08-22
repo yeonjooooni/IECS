@@ -61,7 +61,7 @@ def output_report(solution, distance_matrix, parameters, velocity, fixed_cost, v
             #activity = finish, 우리가 보려고 표시한 return한 차량
         
             report_lst.append([ORD_NO, 'VEH_' + str(vehicle_index[solution[2][i][0]]+2), j+1, city_name,  # 2 더함
-                               min_to_day(arrive_time+time_absolute), round(wait[j], 2), 60 if activity != 'start' else None, min_to_day(round(time[j], 2)+time_absolute) if activity == 'service' else None, delivered_status])
+                               min_to_day(arrive_time+time_absolute), round(wait[j], 2), tw_st[subroute[0][j]] if activity != 'start' else None, min_to_day(round(time[j], 2)+time_absolute) if activity == 'service' else None, delivered_status])
         
         report_lst.append(['-//-', '-//-', '-//-', '-//-', '-//-', '-//-', '-//-', '-//-', '-//-'])
     
