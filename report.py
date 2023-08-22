@@ -256,4 +256,6 @@ def get_submission_file_1(df, day, group, number_of_t, FOLDER_PATH, demand_df, s
     df = pd.concat([df, unassigned_order_ID], axis=0)
     df.fillna("Null", inplace=True)
 
+    
+
     df.to_csv(f"{FOLDER_PATH}/제출파일1_최종/total_output_report_day_{day}_group_{group // number_of_t}.csv", index=False, encoding='cp949')
